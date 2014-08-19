@@ -1,0 +1,70 @@
+<div class="mongoshell-form">
+  <form on-submit='submit'>
+    <div class="editor">
+      <div class="params">
+        {{#fields:name}}
+          {{#visible}}
+            <!-- We've got children! -->
+            {{#children}}
+              <span class="{{class}}" data-field="{{name}}">
+              {{before}}
+              <!-- Iterate on children -->
+              {{#children:name}}
+                {{#visible}}
+                  {{>param}}
+                {{/visible}}
+              {{/children}}
+              {{after}}
+              </span>
+            {{/children}}
+            <!-- No children? Just show this dude. -->
+            {{^children}}{{>param}}{{/children}}
+          {{/visible}}
+        {{/fields}}
+      </div>
+      <div class="buttons">
+        {{#fields:name}}
+          <!-- CHILDREN! -->
+          {{#children:name}}
+            <!-- Do we have a button? yea, render that partial! -->
+            {{#button}}{{>button}}{{/button}}
+          {{/children}}
+          <!-- Just a button -->
+          {{#button}}{{>button}}{{/button}}
+        {{/fields}}
+        {{#submitButton}}
+          {{>button}}
+        {{/submitButton}}
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- {{>param}} -->
+<span
+  data-field="{{name}}">
+  {{before}}
+  <!-- No `text` property. -->
+  {{^text}}
+    <span
+      spellcheck="false"
+      contenteditable="true"
+      on-enter="submit"
+      on-focus="focusField"
+      on-blur="blurField"
+      on-paste="paste"
+      data-type="{{type}}"
+      data-name="{{name}}"
+      class="{{inputClass}}">{{value}}</span>
+  {{/text}}
+  {{#text}}{{text}}{{/text}}
+  {{after}}
+  {{#hint}}
+    <!--span data-field="{{name}}" class="hint">{{hint}}</span-->
+  {{/hint}}
+</span>
+<!-- {{/param}} -->
+
+<!-- {{>button}} -->
+<button class="{{class}}{{visible ? ' enabled' : ''}}" data-field="{{name}}" on-tap="buttonClick">{{button}}</button>
+<!-- {{/button}} -->

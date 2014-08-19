@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Shell Example</title>
+    <script src="bundle.js"></script>
+  </head>
+  <body>
+    
+    <div id="shell"></div>
+
+    <script type="text/javascript">
+      var Shell = require('shell')
+
+      var params = {
+        fields: [
+          { name: 'find', before: 'find(', after: ')', group: [
+            { name: 'query', before: '{' , after: '}', type: 'hash' },
+            { name: 'fields', before: ',{', after: '}', button: 'fields{}', type: 'hash', hint: 'Fields' }
+          ]},
+          { name: 'sort', before: '.sort({', after: '})', button: 'sort()', type: 'hash' },
+          { name: 'skip', before: '.skip(', after: ')', button: 'skip()', type: 'number' },
+          { name: 'limit', before: '.limit(', after: ')', type: 'number', value: 10 },
+          { name: 'explain', text: '.explain()', button: 'explain()' }
+        ],
+        submit: { button: 'Run', class: 'run submit' }
+      }
+
+      var shell = new Shell({
+        el: document.querySelector('#shell'),
+        params: params,
+        onSubmit: function(params){
+          console.log('onSubmit', params)
+          // var toParse = ['query', 'fields', 'sort']
+          // for (var name in params) {
+          //   if (toParse.indexOf(name) !== -1) {
+          //     try {
+          //       params[name] = JSON.stringify(BSON.bsonEval(params[name]))
+          //     } catch (error) {
+          //       // TODO: use message module here...
+          //       alert('ERROR PARSING', params[name])
+          //       console.error(error)
+          //       return
+          //     }
+          //   }
+          // }
+          // var url = ctx.pathname + '?' + query.stringify(params)
+          // progress('#query-results')
+          // pjax(url, '#query-results')
+          //   .once('pjax:success', function(){page.show(url)})
+        }
+      })
+
+      // applyQueryToShell(query.parse(ctx.querystring), shell)
+
+      // var results = document.querySelectorAll('.results li')
+      // for (var i = 0; i < results.length; i++) {
+      //   results[i].addEventListener('click', function(event){
+      //     var id = event.currentTarget.getAttribute('data-id')
+      //     if (id)
+      //       location.href = location.origin + location.pathname + '/documents/' + id
+      //   }, false)
+      // }
+
+      // var nextPage = document.querySelector('.next')
+      // var prevPage = document.querySelector('.previous')
+
+      // var keypath = 'fields.skip'
+      // var skipFieldValue = shell.get(keypath).getValue()
+      // var currentSkip = skipFieldValue ? parseInt(skipFieldValue, 10) : 0
+
+      // if (nextPage) {
+      //   nextPage.addEventListener('click', function(event){
+      //     event.preventDefault()
+      //     var addToSkip = parseInt(nextPage.getAttribute('data-step'), 10)
+      //     shell.set(keypath + '.visible', true)
+      //     shell.set(keypath + '.value', currentSkip + addToSkip)
+      //     shell.fire('submit')
+      //   }, false)
+      // }
+
+      // if (prevPage) {
+      //   prevPage.addEventListener('click', function(event){
+      //     event.preventDefault()
+      //     var subtractToSkip = parseInt(prevPage.getAttribute('data-step'), 10)
+      //     var newSkip = currentSkip - subtractToSkip
+      //     if (newSkip <= 0) {
+      //       shell.set(keypath + '.visible', false)
+      //       shell.set(keypath + '.value', 0)
+      //     } else {
+      //       shell.set(keypath + '.visible', true)
+      //       shell.set(keypath + '.value', newSkip)
+      //     }
+      //     shell.fire('submit')
+      //   }, false)
+      // }
+    </script>
+  </body>
+</html>
