@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mochify",
-    "example": "browserify -r ./index.js:shell > bundle.js && open example.html"
+    "build": "browserify index.js -s Shell > shell.bundle.js"
   },
   "author": "",
   "license": "MIT",
