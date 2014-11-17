@@ -1,0 +1,290 @@
+/*green: #00c123*/
+/*bg: #292929*/
+
+compose-shell {
+  color: #555;
+  position: relative;
+  margin-bottom: 15px;
+}
+compose-shell form {
+  max-width: 100%;
+  line-height: 1.3em;
+  padding: 0;
+}
+compose-shell .editor {
+  position: relative;
+  z-index: 1;
+  padding: 0 0 2.6em;
+  background: #292929;
+}
+
+compose-shell .params {
+  font-size: 1em;
+  line-height: 1.5em;
+  padding: 1em .8em .8em;
+  color: #00c123;
+  font-family: "Liberation Mono","Ubuntu Mono", monaco, "Lucida Console", "Consolas", monospace;
+}
+
+compose-shell .buttons {
+  position: absolute; left: 0; right: 0; bottom: 0;
+
+  -moz-border-radius-bottomleft: 0.3em;
+  -webkit-border-bottom-left-radius: 0.3em;
+  border-bottom-left-radius: 0.3em;
+  -moz-border-radius-bottomright: 0.3em;
+  -webkit-border-bottom-right-radius: 0.3em;
+  border-bottom-right-radius: 0.3em;
+  -moz-box-shadow: rgba(255, 255, 255, 0.05) 0 1px inset;
+  -webkit-box-shadow: rgba(255, 255, 255, 0.05) 0 1px inset;
+  box-shadow: rgba(255, 255, 255, 0.05) 0 1px inset;
+  background: #363636;
+  padding: .6em .7em;
+  font-size: .75em;
+  color: #999;
+  border-top: 1px solid #1c1c1c;
+}
+
+/* param */
+
+compose-shell-param[type] {
+  color: #00c123;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  position: relative;
+}
+compose-shell-param span[contenteditable] {
+  color: #c1c7c7;
+  position: relative; z-index: 1;
+  border-bottom: 1px dashed rgba(255,255,255, .3);
+  display: inline-block;
+  margin: 0 .4em;
+  padding: 0 .3em;
+  position: relative;
+  min-width: 3em;
+}
+
+compose-shell-param span[contenteditable]:before {
+  content: "\feff ";
+}
+
+compose-shell-param span.number { min-width: .5em; }
+compose-shell-param span.placeholder { color: #777; }
+compose-shell-param span:focus {
+  outline: none;
+  color: #fff;
+}
+compose-shell-param span::-moz-selection { background: rgba(255,255,255, .6); color: #292929; }
+compose-shell-param span::selection { background: rgba(255,255,255, .6); color: #292929; }
+compose-shell-param span.text {
+  color: #c1c7c7;
+}
+
+compose-shell-param .hint {
+  position: absolute; top: -2.8em; left: 1em;
+  color: #666; text-shadow: #fff 0 1px;
+  background-image: linear-gradient(#fff, #e3e3e3);
+  border-radius: .3em;
+  box-shadow: rgba(#000, .2) 0 2px 5px;
+  border: 1px solid #aaa;
+  line-height: 1.1em;
+  padding: .4em .4em .2em;
+
+  -webkit-animation: fade-in-up 0.4s 0.2s ease both 1;
+  -moz-animation: fade-in-up 0.4s 0.2s ease both 1;
+  -ms-animation: fade-in-up 0.4s 0.2s ease both 1;
+  -o-animation: fade-in-up 0.4s 0.2s ease both 1;
+  animation: fade-in-up 0.4s 0.2s ease both 1;
+}
+compose-shell-param .hint:after {
+  content: "";
+  height: 0;
+  width: 0;
+  border-right: 7px solid transparent;
+  border-left: 7px solid transparent;
+  border-top: 7px solid #e3e3e3;
+  position: absolute;
+  bottom: -7px;
+  left: 39%;
+}
+compose-shell-param .hint.out {
+  -webkit-animation: fade-out-up 0.3s 0.2s ease both 1;
+  -moz-animation: fade-out-up 0.3s 0.2s ease both 1;
+  -ms-animation: fade-out-up 0.3s 0.2s ease both 1;
+  -o-animation: fade-out-up 0.3s 0.2s ease both 1;
+  animation: fade-out-up 0.3s 0.2s ease both 1;
+}
+
+/* button */
+
+compose-shell-button button {
+  text-shadow: #151515 0 1px 1px;
+  margin-right: .6em;
+  padding: .45em .8em;
+  line-height: 1.2em;
+  font-size: 12px;
+  background: none;
+  -moz-border-radius: 0.4em;
+  -webkit-border-radius: 0.4em;
+  border-radius: 0.4em;
+  -moz-box-shadow: rgba(255, 255, 255, 0.08) 0 1px 0 inset, rgba(255, 255, 255, 0.08) 0 1px;
+  -webkit-box-shadow: rgba(255, 255, 255, 0.08) 0 1px 0 inset, rgba(255, 255, 255, 0.08) 0 1px;
+  box-shadow: rgba(255, 255, 255, 0.08) 0 1px 0 inset, rgba(255, 255, 255, 0.08) 0 1px;
+  border: 1px solid #292929;
+  color: inherit;
+  cursor: pointer;
+}
+compose-shell-button button:hover, compose-shell-button button:focus, compose-shell-button[enabled] button:focus {
+  color: #ddd;
+  outline: none;
+  background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.1));
+  background-image: -o-linear-gradient(rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.1));
+  background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.1));
+  background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.1));
+}
+compose-shell-button[enabled] button, compose-shell-button button:active {
+  background-image: -moz-linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  background-image: -o-linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  background-image: -webkit-linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  background-image: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1));
+  -moz-box-shadow: rgba(0, 0, 0, 0.5) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.5) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+  box-shadow: rgba(0, 0, 0, 0.5) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+  border-color: rgba(0, 0, 0, 0.5);
+  color: #bbb;
+}
+
+compose-shell-button button[type=submit] {
+  float: right;
+  padding: .45em 1em;
+  margin-right: 0;
+  color: #444;
+  text-shadow: rgba(255, 255, 255, 0.3) 0 1px;
+  -moz-transition: background-color 0.2s linear;
+  -o-transition: background-color 0.2s linear;
+  -webkit-transition: background-color 0.2s linear;
+  transition: background-color 0.2s linear;
+  background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+  background-image: -o-linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+  background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+  background-image: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+  background-color: rgba(255, 255, 255, 0.7);
+}
+compose-shell-button button[type=submit]:hover, compose-shell-button button[type=submit]:focus {
+  background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  background-image: -o-linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  background-image: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  background-color: #00c123;
+  color: #00390a;
+  background-color: #32cd4e;
+}
+compose-shell-button button[type=submit]:active {
+  border-color: #292929;
+  background-color: #00ad1f;
+  -moz-box-shadow: rgba(0, 0, 0, 0.8) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+  -webkit-box-shadow: rgba(0, 0, 0, 0.8) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+  box-shadow: rgba(0, 0, 0, 0.8) 0 3px 8px inset, rgba(255, 255, 255, 0.08) 0 1px;
+}
+
+@media screen and (min-width: 550px) {
+  compose-shell .editor {
+    border-radius: 0.3em;
+  }
+  compose-shell .buttons {
+    font-size: .8em;
+  }
+}
+
+@-moz-keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    -moz-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    -moz-transform: translateY(0);
+    transform: translateY(0);
+  }
+}
+@-webkit-keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    -webkit-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    -moz-transform: translateY(20px);
+    -ms-transform: translateY(20px);
+    -o-transform: translateY(20px);
+    -webkit-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    -moz-transform: translateY(0);
+    -ms-transform: translateY(0);
+    -o-transform: translateY(0);
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+}
+
+@-moz-keyframes fade-out-up {
+  0% {
+    opacity: 1;
+    -moz-transform: translateY(0);
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    -moz-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+}
+@-webkit-keyframes fade-out-up {
+  0% {
+    opacity: 1;
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    -webkit-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+}
+@keyframes fade-out-up {
+  0% {
+    opacity: 1;
+    -moz-transform: translateY(0);
+    -ms-transform: translateY(0);
+    -o-transform: translateY(0);
+    -webkit-transform: translateY(0);
+    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    -moz-transform: translateY(20px);
+    -ms-transform: translateY(20px);
+    -o-transform: translateY(20px);
+    -webkit-transform: translateY(20px);
+    transform: translateY(20px);
+  }
+}

@@ -1,0 +1,18 @@
+<span class="before">{{before}}</span>
+{{~#if group~}}
+  <span class="group"></span>
+{{~else~}}
+  {{~#ifEqual type 'text'~}}
+    <span>{{content}}</span>
+  {{~else~}}
+    {{~#ifEqual type 'boolean'~}}
+      <span class="boolean">{{content}}</span>
+    {{~else~}}
+      <span
+        spellcheck="false"
+        {{#if editable}}contenteditable="true"{{/if}}
+        class="{{type}}{{#if placeholder}} placeholder{{/if}}">{{#if value}}{{value}}{{else}}{{placeholder}}{{/if}}</span>
+    {{~/ifEqual~}}
+  {{~/ifEqual~}}
+{{~/if~}}
+<span class="after">{{after}}</span>

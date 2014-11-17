@@ -1,0 +1,24 @@
+{
+  "name": "compose-shell",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "handlebars": "^2.0.0",
+    "hbsfy": "^2.2.0"
+  },
+  "devDependencies": {
+    "browserify": "^6.3.2",
+    "watchify": "^2.1.1"
+  },
+  "browserify": {
+    "transform": [
+      "hbsfy"
+    ]
+  }
+}
