@@ -1,3 +1,1513 @@
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+module.exports = getAnimationEventTypes()
+
+function camelCaseEventTypes(prefix) {
+  prefix = prefix || '';
+
+  return {
+    start: prefix + 'AnimationStart',
+    end: prefix + 'AnimationEnd',
+    iteration: prefix + 'AnimationIteration'
+  };
+}
+
+function lowerCaseEventTypes(prefix) {
+  prefix = prefix || '';
+
+  return {
+    start: prefix + 'animationstart',
+    end: prefix + 'animationend',
+    iteration: prefix + 'animationiteration'
+  };
+}
+
+function getAnimationEventTypes() {
+  var prefixes = ['webkit', 'Moz', 'O', ''];
+  var style = document.documentElement.style;
+
+  // browser compliant
+  if (undefined !== style.animationName) {
+    return lowerCaseEventTypes();
+  }
+
+  for (var i = 0, len = prefixes.length, prefix; i < len; i++) {
+    prefix = prefixes[i];
+
+    if (undefined !== style[prefix + 'AnimationName']) {
+      // Webkit
+      if (0 === i) {
+        return camelCaseEventTypes(prefix.toLowerCase());
+      }
+      // Mozilla
+      else if (1 === i) {
+        return lowerCaseEventTypes();
+      }
+      // Opera
+      else if (2 === i) {
+        return lowerCaseEventTypes(prefix.toLowerCase());
+      }
+    }
+  }
+
+  return {};
+}
+},{}],2:[function(require,module,exports){
+var dateFormat = require("./date.format");
+
+module.exports = {
+  getIndentation: function(level, indentation) {
+    var pad;
+    if (indentation) {
+      pad = "\n";
+      var times = level * indentation
+      for (var i = times; i == 0; i--) {
+        pad += " "
+      }
+      // _.times(level * indentation, (function(_this) {
+      //   return function() {
+      //     return pad += " ";
+      //   };
+      // })(this));
+      return pad;
+    } else {
+      return "";
+    }
+  },
+  toBsonString: function(json, options) {
+    var emptyObject, indentation, level, p, result, v;
+    if (options == null) {
+      options = {};
+    }
+    level = options.level || 0;
+    if (options.indentation != null) {
+      indentation = options.indentation;
+    } else {
+      indentation = 2;
+    }
+    result = "";
+    emptyObject = true;
+    if (result !== "") {
+      result += "" + (this.getIndentation(level, indentation));
+    }
+    if (options.valueOnly) {
+      return this.parseValue(json, result, level, indentation, options);
+    } else if (json instanceof Array) {
+      result += "[";
+    } else if (json instanceof Object) {
+      result += "{";
+    }
+    for (p in json) {
+      v = json[p];
+      emptyObject = false;
+      result += this.getIndentation(level + 1, indentation);
+      if (!(json instanceof Array)) {
+        if (options.html) {
+          if (p.match(/[^A-z0-9_]/)) {
+            result += "<span class='key'>\"" + ($("<div>").text(p).html()) + "\"</span>: ";
+          } else {
+            result += "<span class='key'>" + p + "</span>: ";
+          }
+        } else {
+          if (p.match(/^\d|[^A-z0-9_]/)) {
+            result += "\"" + (p.replace(/"/g, '\\"')) + "\": ";
+          } else {
+            result += "" + p + ": ";
+          }
+        }
+      }
+      result = this.parseValue(v, result, level, indentation, options);
+    }
+    if (result.slice(-1) === ",") {
+      result = result.slice(0, -1);
+    }
+    if (!emptyObject) {
+      result += this.getIndentation(level, indentation);
+    }
+    if (json instanceof Array) {
+      return result += "]";
+    } else if (json instanceof Object) {
+      return result += "}";
+    }
+  },
+  parseValue: function(v, result, level, indentation, options) {
+    var className, dt, dtf, val;
+    if (v === null) {
+      if (options.html) {
+        result += "<span class='value'>null</span>,";
+      } else {
+        result += "null,";
+      }
+    } else if (typeof v === "object") {
+      switch (v.constructor.name) {
+        case "ObjectID":
+          if (options.html) {
+            result += "<span class='function'>ObjectId</span>(<span class='string'>\"<span class='_id'>" + (v.toString()) + "</span>\"</span>),";
+          } else {
+            result += "ObjectId(\"" + (v.toString()) + "\"),";
+          }
+          break;
+        case "Date":
+          dt = new Date(v.toString());
+          dtf = dateFormat(dt, 'isoUtcDateTime');
+          if (dt.getMilliseconds() > 0) {
+            dtf = dtf.replace(/Z$/, "." + (dateFormat(dt, 'l')) + "Z");
+          }
+          if (options.html) {
+            result += "<span class='function'>ISODate</span>(<span class='string'>\"" + dtf + "\"</span>),";
+          } else {
+            result += "ISODate(\"" + dtf + "\"),";
+          }
+          break;
+        case "RegExp":
+          if (options.html) {
+            result += "<span class='regex'>/" + (v.toString()) + "</span>,";
+          } else {
+            result += "/" + (v.toString()) + ",";
+          }
+          break;
+        default:
+          if (v["$oid"]) {
+            if (options.html) {
+              result += "<span class='function'>ObjectId</span>(<span class='string'>\"<span class='_id'>" + v["$oid"] + "</span>\"</span>),";
+            } else {
+              result += "ObjectId(\"" + v["$oid"] + "\"),";
+            }
+          } else if (v["$date"] != null) {
+            dt = new Date(v['$date']);
+            dtf = dateFormat(dt, 'isoUtcDateTime');
+            if (dt.getMilliseconds() > 0) {
+              dtf = dtf.replace(/Z$/, "." + (dateFormat(dt, 'l')) + "Z");
+            }
+            if (options.html) {
+              result += "<span class='function'>ISODate</span>(<span class='string'>\"" + dtf + "\"</span>),";
+            } else {
+              result += "ISODate(\"" + dtf + "\"),";
+            }
+          } else if (v["$regex"]) {
+            if (options.html) {
+              result += "<span class='regex'>/" + v["$regex"] + "/" + v["$options"] + "</span>,";
+            } else {
+              result += "/" + v["$regex"] + "/" + v["$options"] + ",";
+            }
+          } else if (v["$timestamp"]) {
+            if (options.html) {
+              result += "<span class='function'>Timestamp</span>(" + v["$timestamp"]["t"] + ", " + v["$timestamp"]["i"] + "),";
+            } else {
+              result += "Timestamp(" + v["$timestamp"]["t"] + ", " + v["$timestamp"]["i"] + "),";
+            }
+          } else if (v["$ref"]) {
+            if (options.html) {
+              result += "<span class='function'>Dbref</span>(\"<span class='string'>" + v["namespace"] + "</span>\", " + (this.toBsonString(v["oid"], {
+                level: level + 1,
+                valueOnly: true,
+                html: true
+              }));
+              if (v["db"]) {
+                result += ", \"<span class='string'>" + v["db"] + "</span>\"";
+              }
+              result += "),";
+            } else {
+              result += "Dbref(\"" + v["$ref"] + "\", " + (this.toBsonString(v["$id"], {
+                level: level + 1,
+                valueOnly: true,
+                html: false
+              })) + "),";
+            }
+          } else {
+            result += "" + (this.toBsonString(v, {
+              level: level + 1,
+              indentation: indentation,
+              html: options.html
+            })) + ",";
+          }
+      }
+    } else if (v === "<BSON::Binary>") {
+      if (options.html) {
+        result += "<span class='function'>Binary</span>(<span class='string'>\"[BSON::Binary]\"</span>),";
+      } else {
+        result += "Binary(\"[BSON::Binary]\"),";
+      }
+    } else {
+      val = JSON.stringify(v);
+      if (options.html) {
+        val = val.replace(/</g, '&lt;');
+        className = 'string';
+        if (val === 'false' || val === 'true') {
+          className = 'value';
+        }
+        if (typeof v === 'number') {
+          className = 'number';
+        }
+        result += "<span class='" + className + "'>" + val + "</span>,";
+      } else {
+        result += "" + val + ",";
+      }
+    }
+    if (options.valueOnly) {
+      if (result.slice(-1) === ",") {
+        result = result.slice(0, -1);
+      }
+    }
+    return result;
+  },
+  sanitizeRegex: function(json) {
+    var p, regexp_parts, v;
+    for (p in json) {
+      v = json[p];
+      if (v instanceof RegExp) {
+        regexp_parts = v.toString().match(/^\/(.*)\/([gim]*)$/);
+        json[p] = {
+          $regex: regexp_parts[1],
+          $options: regexp_parts[2]
+        };
+      } else if (p === "$oid" && typeof v === "undefined") {
+        alert("json[p] = window.dblayer.page_data.document_oids.shift()");
+      } else if (p === "$date" && typeof v === "undefined") {
+        json[p] = (new Date()).getTime();
+      } else if (typeof v === "object") {
+        json[p] = this.sanitizeRegex(v);
+      }
+    }
+    return json;
+  },
+  bsonEval: function(src) {
+    var error, json, mask, p, v;
+    try {
+      mask = {};
+      for (p in this) {
+        v = this[p];
+        mask[v] = void 0;
+      }
+      mask.ObjectId = function(id) {
+        return {
+          $oid: id
+        };
+      };
+      mask.Date = function(date) {
+        return {
+          $date: date
+        };
+      };
+      mask.ISODate = function(date) {
+        return {
+          $date: (new Date(date)).getTime()
+        };
+      };
+      mask.Timestamp = function(t, i) {
+        return {
+          $timestamp: {
+            "t": t,
+            "i": i
+          }
+        };
+      };
+      mask.Dbref = function(name, id, db) {
+        return {
+          namespace: name,
+          oid: id,
+          db: db
+        };
+      };
+      mask.Binary = function(v) {
+        throw "Cannot save documents with Binary values";
+      };
+      json = (new Function("with(this){ return " + src + " }")).call(mask);
+      return this.sanitizeRegex(json);
+    } catch (_error) {
+      error = _error;
+      throw error;
+    }
+  }
+};
+},{"./date.format":7}],3:[function(require,module,exports){
+// hbsfy compiled Handlebars template
+var HandlebarsCompiler = require('hbsfy/runtime');
+module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partials,data) {
+  return "enabled";
+  },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
+  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "<button\n  class=\"";
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.enabled : depth0), {"name":"if","hash":{},"fn":this.program(1, data),"inverse":this.noop,"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  return buffer + "\"\n  type=\""
+    + escapeExpression(((helper = (helper = helpers.type || (depth0 != null ? depth0.type : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"type","hash":{},"data":data}) : helper)))
+    + "\">"
+    + escapeExpression(((helper = (helper = helpers.content || (depth0 != null ? depth0.content : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"content","hash":{},"data":data}) : helper)))
+    + "</button>";
+},"useData":true});
+
+},{"hbsfy/runtime":16}],4:[function(require,module,exports){
+var template = require('./button.hbs')
+
+xtag.register('compose-shell-button', {
+  lifecycle: {
+    created: function(){
+      this.type = this.getAttribute('type')
+      this.innerHTML = template({
+        enabled: this.enabled,
+        type: this.type,
+        content: this.textContent
+      })
+      if (this.type !== 'submit')
+        this.shell.registerButton(this)
+    }
+  },
+
+  events: {
+    'click:delegate(button)': function(event) {
+      var button = event.currentTarget
+      if (button.type === 'submit')
+        return
+      event.preventDefault()
+      event.currentTarget.enabled = !event.currentTarget.enabled
+      xtag.fireEvent(button, 'toggle')
+    }
+  },
+
+  accessors: {
+    enabled: {
+      get: function(){ return !!this.getAttribute('enabled') },
+      set: function(enabled){
+        if (enabled === true)
+          this.setAttribute('enabled', true)
+        else if (enabled === false)
+          this.removeAttribute('enabled')
+      }
+    },
+    toggle: {
+      get: function(){ return this.getAttribute('toggle') }
+    }
+  }
+})
+},{"./button.hbs":3}],5:[function(require,module,exports){
+var template = require('./param.hbs')
+var BSON = require('./bson')
+var cssAnimEventTypes = require('./anim-events')
+
+xtag.register('compose-shell-param', {
+  lifecycle: {
+    created: function(){
+      this.params = xtag.queryChildren(this, 'compose-shell-param')
+      this.group = !!this.params.length
+
+      this.innerHTML = template({
+        before: this.getAttribute('before'),
+        group: this.group,
+        editable: this.editable,
+        value: this.parseValue(this.getAttribute('value')),
+        type: this.type,
+        content: this.textContent,
+        after: this.getAttribute('after'),
+        placeholder: this.placeholder
+      })
+
+      this.hide()
+
+      if (this.params.length > 0) {
+        var groupEl = this.querySelector('.params-group')
+        for (var param in this.params) {
+          this.params[param].shell = this.shell
+          this.params[param].addEventListener('show', this.updateVisibility.bind(this))
+          this.params[param].addEventListener('hide', this.updateVisibility.bind(this))
+          groupEl.appendChild(this.params[param])
+          // this.updateVisibility()
+        }
+      }
+
+      // this.params = xtag.queryChildren(this, 'compose-shell-param')
+
+      if (this.type)
+        this.shell.registerParam(this)
+
+      if (this.type === 'text' || (this.getAttribute('value') || this.required))
+        this.visible = true
+    }
+  },
+
+  events: {
+    'focus:delegate(span[contenteditable])': function(event) {
+      var param = event.currentTarget
+      if (param.group) return
+      if (param.placeholder) {
+        if (this.textContent === param.placeholder && /placeholder/.test(this.className))
+          this.textContent = ''
+      }
+    },
+    'blur:delegate(span[contenteditable])': function(event) {
+      var param = event.currentTarget
+      if (param.group) return
+      if (param.placeholder)
+        if (this.textContent === '') {
+          this.textContent = param.placeholder
+          if (!/placeholder/.test(this.className))
+            this.className += ' placeholder'
+        } else {
+          this.className = this.className.replace('placeholder', '')
+        }
+    },
+    show: function(event){
+      if (this.customInput)
+        this.customInput.focus()
+      if (this.hint)
+        this.showHint()
+    }
+  },
+
+  accessors: {
+    // params: { get: function(){ return xtag.queryChildren(this, 'compose-shell-param') } },
+    name: { get: function(){ return this.getAttribute('name') } },
+    type: { get: function(){ return this.getAttribute('type') } },
+    placeholder: { get: function(){ return this.getAttribute('placeholder') } },
+    hint: { get: function(){ return this.getAttribute('hint') } },
+    required: { get: function(){ return this.getAttribute('required') } },
+    // group: { get: function() { return this.params.length > 0 } },
+    editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
+    optional: { get: function(){ return !!this.getAttribute('optional') } },
+    dependency: { get: function(){ return this.getAttribute('dependency') } },
+    customInput: { get: function() { return this.querySelector('span[contenteditable]') } },
+    parser: { get: function() { return this.getAttribute('parser') } },
+    visible: {
+      get: function(){ return !this.getAttribute('hidden') },
+      set: function(visible){
+        if (visible === true) {
+          this.removeAttribute('hidden')
+          xtag.fireEvent(this, 'show')
+        } else if (visible === false) {
+          this.setAttribute('hidden', true)
+          xtag.fireEvent(this, 'hide')
+        }
+      }
+    },
+
+    value: {
+      get: function(){
+        var val;
+        if (!this.visible)
+          return null // no value
+        if (this.type === 'boolean') {
+          val = 1
+        } else if (this.customInput) {
+          // ensure stuff by blurring.
+          this.customInput.blur()
+
+          val = this.customInput.textContent
+          if (this.placeholder) {
+            if (/placeholder/.test(this.customInput.className) && val === this.placeholder)
+              val = ""
+          }
+          if (val && this.type === 'hash')
+            val = '{' + val + '}'
+        }
+        return this.serializeValue(val)
+      }
+    }
+  },
+
+  methods: {
+    registerParam: function(param){
+      // Pass through
+      this.shell.registerParam(param)
+    },
+    toggle: function(){ this.visible = !this.visible },
+    show: function(){ this.visible = true },
+    hide: function(){ this.visible = false },
+    
+    updateVisibility: function(){
+      this.visible = [].some.call(this.params, function(child){ return child.visible })
+    },
+
+    showHint: function(){
+      var hintEl = this.querySelector('.hint')
+      if (hintEl)
+        this.removeChild(hintEl)
+      
+      hintEl = document.createElement('span')
+      hintEl.className = 'hint'
+      hintEl.textContent = this.hint
+
+      clearTimeout(this.hintTimeout)
+      this.appendChild(hintEl)
+      this.hintTimeout = setTimeout(function(){
+        hintEl.className += ' out'
+        hintEl.addEventListener(cssAnimEventTypes.end, function animEnd(event){
+          this.removeChild(hintEl)
+          hintEl.removeEventListener(cssAnimEventTypes.end, animEnd)
+        }.bind(this), false)
+      }.bind(this), 2000)
+    },
+
+    serializeValue: function(value){
+      if (!this.parser)
+        return value
+
+      if (this.parser === 'bson') {
+        try {
+          return JSON.stringify(BSON.bsonEval(value))
+        } catch (error) {
+          console.log(error)
+          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unparsable value for ' + this.name)}})
+        }
+      }
+    },
+    
+    parseValue: function(value){
+      if (!this.parser)
+        return value
+      if (this.parser === 'bson' && value) {
+        try {
+          return stripWrapper(BSON.toBsonString(JSON.parse(value), {indentation: 0}))
+        } catch (error) {
+          console.log(error)
+          return value
+        }
+      }
+    }
+  }
+})
+
+function stripWrapper(queryString) {
+  var matches = queryString.match(/\{(.+)\}/)
+  if (matches)
+    return matches[1]
+}
+},{"./anim-events":1,"./bson":2,"./param.hbs":17}],6:[function(require,module,exports){
+var template = require('./shell.hbs')
+
+xtag.register('compose-shell', {
+  lifecycle: {
+    created: function(){
+      var params = xtag.queryChildren(this, 'compose-shell-param')
+      var buttons = xtag.queryChildren(this, 'compose-shell-button')
+      var oldInputs = this.querySelectorAll('input,select,textarea')
+
+      // Render the initial template
+      this.innerHTML = template()
+
+      for (var i in this.attributes) {
+        var name = this.attributes[i].nodeName
+        if (name)
+          this.form.setAttribute(name, this.attributes[i].value)
+      }
+
+      [].forEach.call(oldInputs, function(input){
+        this.form.appendChild(input)
+      }.bind(this))
+      
+      var paramsEl = this.querySelector('.params')
+      for (var i in params) {
+        params[i].shell = this
+        paramsEl.appendChild(params[i])
+      }
+      
+      var buttonsEl = this.querySelector('.buttons')
+      for (var i in buttons) {
+        buttons[i].shell = this
+        buttonsEl.appendChild(buttons[i])
+      }
+
+    }
+  },
+
+  events: {
+    'submit:delegate(form)': function(event) {
+      console.log('form submit')
+      event.currentTarget.generateInputs()
+    },
+    'toggle:delegate(compose-shell-button)': function(event) {
+      var toggle = event.target.getAttribute('toggle')
+
+      var shell = event.currentTarget
+      var param = shell.params[toggle]
+      if (param)
+        param.toggle()
+    },
+    'show:delegate(compose-shell-param)': function(event){
+      var shell = event.currentTarget
+      if (this.dependency && !shell.params[this.dependency].visible) {
+        xtag.fireEvent(shell, 'notify', {detail: {message: this.name + ' requires ' + this.dependency}})
+        shell.params[this.dependency].show()
+      }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = true
+    },
+    'hide:delegate(compose-shell-param)': function(event){
+      var shell = event.currentTarget
+      if (this.requiredBy && !this.visible && shell.params[this.requiredBy].visible) {
+        shell.params[this.requiredBy].hide()
+      }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = false
+    },
+    'keypress:keypass(13):delegate(compose-shell-param)': function(event){
+      event.preventDefault()
+      var submitEvent = new Event('submit', {bubbles: true, cancelable: true})
+      var form = event.currentTarget.form
+      form.dispatchEvent(submitEvent)
+      setTimeout(function(){
+        if (!submitEvent.defaultPrevented) {
+          form.submit()
+        }
+      }, 50)
+    },
+    notify: function(event){
+      if (this.onNotify)
+        this.onNotify(event.detail.message)
+    }
+  },
+
+  accessors: {
+    form: { get: function(){ return this.querySelector('form') } },
+    onNotify: {
+      get: function(){
+        var notify = this.getAttribute('on-notify')
+        return notify && eval(notify) || false
+      }
+    }
+  },
+
+  methods: {
+    registerParam: function(param){
+      this.params = this.params || {}
+      this.params[param.name] = param
+      if (param.dependency && this.params[param.dependency])
+        this.params[param.dependency].requiredBy = param.name
+    },
+    registerButton: function(button){
+      this.buttons = this.buttons || {}
+      this.buttons[button.toggle] = button
+      if (this.params[button.toggle].visible)
+        button.enabled = true
+    },
+    generateInputs: function() {
+      for (var name in this.params) {
+        if (this.params[name].value) {
+          var input = document.createElement('input')
+          input.type = 'hidden'
+          input.value = this.params[name].value
+          input.name = name
+          this.form.appendChild(input)
+        }
+      }
+    }
+  }
+})
+},{"./shell.hbs":18}],7:[function(require,module,exports){
+/*
+ * Date Format 1.2.3
+ * (c) 2007-2009 Steven Levithan <stevenlevithan.com>
+ * MIT license
+ *
+ * http://blog.stevenlevithan.com/archives/date-time-format
+ * Includes enhancements by Scott Trenda <scott.trenda.net>
+ * and Kris Kowal <cixar.com/~kris.kowal/>
+ *
+ * Accepts a date, a mask, or a date and a mask.
+ * Returns a formatted version of the given date.
+ * The date defaults to the current date/time.
+ * The mask defaults to dateFormat.masks.default.
+ */
+
+var dateFormat = function() {
+  var token = /d{1,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\1?|[LloSZ]|"[^"]*"|'[^']*'/g,
+    timezone = /\b(?:[PMCEA][SDP]T|(?:Pacific|Mountain|Central|Eastern|Atlantic) (?:Standard|Daylight|Prevailing) Time|(?:GMT|UTC)(?:[-+]\d{4})?)\b/g,
+    timezoneClip = /[^-+\dA-Z]/g,
+    pad = function (val, len) {
+      val = String(val);
+      len = len || 2;
+      while (val.length < len) val = "0" + val;
+      return val;
+    };
+
+  // Regexes and supporting functions are cached through closure
+  return function (date, mask, utc) {
+    var dF = dateFormat;
+
+    // You can't provide utc if you skip other args (use the "UTC:" mask prefix)
+    if (arguments.length == 1 && Object.prototype.toString.call(date) == "[object String]" && !/\d/.test(date)) {
+      mask = date;
+      date = undefined;
+    }
+
+    // Passing date through Date applies Date.parse, if necessary
+    date = date ? new Date(date) : new Date;
+    if (isNaN(date)) throw SyntaxError("invalid date");
+
+    mask = String(dF.masks[mask] || mask || dF.masks["default"]);
+
+    // Allow setting the utc argument via the mask
+    if (mask.slice(0, 4) == "UTC:") {
+      mask = mask.slice(4);
+      utc = true;
+    }
+
+    var _ = utc ? "getUTC" : "get",
+      d = date[_ + "Date"](),
+      D = date[_ + "Day"](),
+      m = date[_ + "Month"](),
+      y = date[_ + "FullYear"](),
+      H = date[_ + "Hours"](),
+      M = date[_ + "Minutes"](),
+      s = date[_ + "Seconds"](),
+      L = date[_ + "Milliseconds"](),
+      o = utc ? 0 : date.getTimezoneOffset(),
+      flags = {
+        d:    d,
+        dd:   pad(d),
+        ddd:  dF.i18n.dayNames[D],
+        dddd: dF.i18n.dayNames[D + 7],
+        m:    m + 1,
+        mm:   pad(m + 1),
+        mmm:  dF.i18n.monthNames[m],
+        mmmm: dF.i18n.monthNames[m + 12],
+        yy:   String(y).slice(2),
+        yyyy: y,
+        h:    H % 12 || 12,
+        hh:   pad(H % 12 || 12),
+        H:    H,
+        HH:   pad(H),
+        M:    M,
+        MM:   pad(M),
+        s:    s,
+        ss:   pad(s),
+        l:    pad(L, 3),
+        L:    pad(L > 99 ? Math.round(L / 10) : L),
+        t:    H < 12 ? "a"  : "p",
+        tt:   H < 12 ? "am" : "pm",
+        T:    H < 12 ? "A"  : "P",
+        TT:   H < 12 ? "AM" : "PM",
+        Z:    utc ? "UTC" : (String(date).match(timezone) || [""]).pop().replace(timezoneClip, ""),
+        o:    (o > 0 ? "-" : "+") + pad(Math.floor(Math.abs(o) / 60) * 100 + Math.abs(o) % 60, 4),
+        S:    ["th", "st", "nd", "rd"][d % 10 > 3 ? 0 : (d % 100 - d % 10 != 10) * d % 10]
+      };
+
+    return mask.replace(token, function ($0) {
+      return $0 in flags ? flags[$0] : $0.slice(1, $0.length - 1);
+    });
+  };
+}();
+
+// Some common format strings
+dateFormat.masks = {
+  "default":      "ddd mmm dd yyyy HH:MM:ss",
+  shortDate:      "m/d/yy",
+  mediumDate:     "mmm d, yyyy",
+  longDate:       "mmmm d, yyyy",
+  fullDate:       "dddd, mmmm d, yyyy",
+  shortTime:      "h:MM TT",
+  mediumTime:     "h:MM:ss TT",
+  longTime:       "h:MM:ss TT Z",
+  isoDate:        "yyyy-mm-dd",
+  isoTime:        "HH:MM:ss",
+  isoDateTime:    "yyyy-mm-dd'T'HH:MM:ss",
+  isoUtcDateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss'Z'"
+};
+
+// Internationalization strings
+dateFormat.i18n = {
+  dayNames: [
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat",
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+  ],
+  monthNames: [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
+  ]
+};
+
+// For convenience...
+Date.prototype.format = function (mask, utc) {
+  return dateFormat(this, mask, utc);
+};
+
+module.exports = dateFormat;
+},{}],8:[function(require,module,exports){
+require('./vendor/x-tag-core')
+
+var Handlebars = require('hbsfy/runtime')
+Handlebars.registerHelper('ifEqual', function(v1, v2, options) {
+  if (v1 === v2) {
+    return options.fn(this)
+  }
+  return options.inverse(this)
+})
+
+require('./compose-shell')
+require('./compose-shell-param')
+require('./compose-shell-button')
+
+document.addEventListener('page:load', function(){
+  var shells = document.body.querySelectorAll('compose-shell')
+  for (var i in shells) {
+    var shell = shells[i]
+    if (shell.parentNode)
+      shell.parentNode.replaceChild(document.importNode(shell, true), shell)
+  }
+})
+},{"./compose-shell":6,"./compose-shell-button":4,"./compose-shell-param":5,"./vendor/x-tag-core":19,"hbsfy/runtime":16}],9:[function(require,module,exports){
+"use strict";
+/*globals Handlebars: true */
+var base = require("./handlebars/base");
+
+// Each of these augment the Handlebars object. No need to setup here.
+// (This is done to easily share code between commonjs and browse envs)
+var SafeString = require("./handlebars/safe-string")["default"];
+var Exception = require("./handlebars/exception")["default"];
+var Utils = require("./handlebars/utils");
+var runtime = require("./handlebars/runtime");
+
+// For compatibility and usage outside of module systems, make the Handlebars object a namespace
+var create = function() {
+  var hb = new base.HandlebarsEnvironment();
+
+  Utils.extend(hb, base);
+  hb.SafeString = SafeString;
+  hb.Exception = Exception;
+  hb.Utils = Utils;
+  hb.escapeExpression = Utils.escapeExpression;
+
+  hb.VM = runtime;
+  hb.template = function(spec) {
+    return runtime.template(spec, hb);
+  };
+
+  return hb;
+};
+
+var Handlebars = create();
+Handlebars.create = create;
+
+Handlebars['default'] = Handlebars;
+
+exports["default"] = Handlebars;
+},{"./handlebars/base":10,"./handlebars/exception":11,"./handlebars/runtime":12,"./handlebars/safe-string":13,"./handlebars/utils":14}],10:[function(require,module,exports){
+"use strict";
+var Utils = require("./utils");
+var Exception = require("./exception")["default"];
+
+var VERSION = "2.0.0";
+exports.VERSION = VERSION;var COMPILER_REVISION = 6;
+exports.COMPILER_REVISION = COMPILER_REVISION;
+var REVISION_CHANGES = {
+  1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
+  2: '== 1.0.0-rc.3',
+  3: '== 1.0.0-rc.4',
+  4: '== 1.x.x',
+  5: '== 2.0.0-alpha.x',
+  6: '>= 2.0.0-beta.1'
+};
+exports.REVISION_CHANGES = REVISION_CHANGES;
+var isArray = Utils.isArray,
+    isFunction = Utils.isFunction,
+    toString = Utils.toString,
+    objectType = '[object Object]';
+
+function HandlebarsEnvironment(helpers, partials) {
+  this.helpers = helpers || {};
+  this.partials = partials || {};
+
+  registerDefaultHelpers(this);
+}
+
+exports.HandlebarsEnvironment = HandlebarsEnvironment;HandlebarsEnvironment.prototype = {
+  constructor: HandlebarsEnvironment,
+
+  logger: logger,
+  log: log,
+
+  registerHelper: function(name, fn) {
+    if (toString.call(name) === objectType) {
+      if (fn) { throw new Exception('Arg not supported with multiple helpers'); }
+      Utils.extend(this.helpers, name);
+    } else {
+      this.helpers[name] = fn;
+    }
+  },
+  unregisterHelper: function(name) {
+    delete this.helpers[name];
+  },
+
+  registerPartial: function(name, partial) {
+    if (toString.call(name) === objectType) {
+      Utils.extend(this.partials,  name);
+    } else {
+      this.partials[name] = partial;
+    }
+  },
+  unregisterPartial: function(name) {
+    delete this.partials[name];
+  }
+};
+
+function registerDefaultHelpers(instance) {
+  instance.registerHelper('helperMissing', function(/* [args, ]options */) {
+    if(arguments.length === 1) {
+      // A missing field in a {{foo}} constuct.
+      return undefined;
+    } else {
+      // Someone is actually trying to call something, blow up.
+      throw new Exception("Missing helper: '" + arguments[arguments.length-1].name + "'");
+    }
+  });
+
+  instance.registerHelper('blockHelperMissing', function(context, options) {
+    var inverse = options.inverse,
+        fn = options.fn;
+
+    if(context === true) {
+      return fn(this);
+    } else if(context === false || context == null) {
+      return inverse(this);
+    } else if (isArray(context)) {
+      if(context.length > 0) {
+        if (options.ids) {
+          options.ids = [options.name];
+        }
+
+        return instance.helpers.each(context, options);
+      } else {
+        return inverse(this);
+      }
+    } else {
+      if (options.data && options.ids) {
+        var data = createFrame(options.data);
+        data.contextPath = Utils.appendContextPath(options.data.contextPath, options.name);
+        options = {data: data};
+      }
+
+      return fn(context, options);
+    }
+  });
+
+  instance.registerHelper('each', function(context, options) {
+    if (!options) {
+      throw new Exception('Must pass iterator to #each');
+    }
+
+    var fn = options.fn, inverse = options.inverse;
+    var i = 0, ret = "", data;
+
+    var contextPath;
+    if (options.data && options.ids) {
+      contextPath = Utils.appendContextPath(options.data.contextPath, options.ids[0]) + '.';
+    }
+
+    if (isFunction(context)) { context = context.call(this); }
+
+    if (options.data) {
+      data = createFrame(options.data);
+    }
+
+    if(context && typeof context === 'object') {
+      if (isArray(context)) {
+        for(var j = context.length; i<j; i++) {
+          if (data) {
+            data.index = i;
+            data.first = (i === 0);
+            data.last  = (i === (context.length-1));
+
+            if (contextPath) {
+              data.contextPath = contextPath + i;
+            }
+          }
+          ret = ret + fn(context[i], { data: data });
+        }
+      } else {
+        for(var key in context) {
+          if(context.hasOwnProperty(key)) {
+            if(data) {
+              data.key = key;
+              data.index = i;
+              data.first = (i === 0);
+
+              if (contextPath) {
+                data.contextPath = contextPath + key;
+              }
+            }
+            ret = ret + fn(context[key], {data: data});
+            i++;
+          }
+        }
+      }
+    }
+
+    if(i === 0){
+      ret = inverse(this);
+    }
+
+    return ret;
+  });
+
+  instance.registerHelper('if', function(conditional, options) {
+    if (isFunction(conditional)) { conditional = conditional.call(this); }
+
+    // Default behavior is to render the positive path if the value is truthy and not empty.
+    // The `includeZero` option may be set to treat the condtional as purely not empty based on the
+    // behavior of isEmpty. Effectively this determines if 0 is handled by the positive path or negative.
+    if ((!options.hash.includeZero && !conditional) || Utils.isEmpty(conditional)) {
+      return options.inverse(this);
+    } else {
+      return options.fn(this);
+    }
+  });
+
+  instance.registerHelper('unless', function(conditional, options) {
+    return instance.helpers['if'].call(this, conditional, {fn: options.inverse, inverse: options.fn, hash: options.hash});
+  });
+
+  instance.registerHelper('with', function(context, options) {
+    if (isFunction(context)) { context = context.call(this); }
+
+    var fn = options.fn;
+
+    if (!Utils.isEmpty(context)) {
+      if (options.data && options.ids) {
+        var data = createFrame(options.data);
+        data.contextPath = Utils.appendContextPath(options.data.contextPath, options.ids[0]);
+        options = {data:data};
+      }
+
+      return fn(context, options);
+    } else {
+      return options.inverse(this);
+    }
+  });
+
+  instance.registerHelper('log', function(message, options) {
+    var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
+    instance.log(level, message);
+  });
+
+  instance.registerHelper('lookup', function(obj, field) {
+    return obj && obj[field];
+  });
+}
+
+var logger = {
+  methodMap: { 0: 'debug', 1: 'info', 2: 'warn', 3: 'error' },
+
+  // State enum
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3,
+  level: 3,
+
+  // can be overridden in the host environment
+  log: function(level, message) {
+    if (logger.level <= level) {
+      var method = logger.methodMap[level];
+      if (typeof console !== 'undefined' && console[method]) {
+        console[method].call(console, message);
+      }
+    }
+  }
+};
+exports.logger = logger;
+var log = logger.log;
+exports.log = log;
+var createFrame = function(object) {
+  var frame = Utils.extend({}, object);
+  frame._parent = object;
+  return frame;
+};
+exports.createFrame = createFrame;
+},{"./exception":11,"./utils":14}],11:[function(require,module,exports){
+"use strict";
+
+var errorProps = ['description', 'fileName', 'lineNumber', 'message', 'name', 'number', 'stack'];
+
+function Exception(message, node) {
+  var line;
+  if (node && node.firstLine) {
+    line = node.firstLine;
+
+    message += ' - ' + line + ':' + node.firstColumn;
+  }
+
+  var tmp = Error.prototype.constructor.call(this, message);
+
+  // Unfortunately errors are not enumerable in Chrome (at least), so `for prop in tmp` doesn't work.
+  for (var idx = 0; idx < errorProps.length; idx++) {
+    this[errorProps[idx]] = tmp[errorProps[idx]];
+  }
+
+  if (line) {
+    this.lineNumber = line;
+    this.column = node.firstColumn;
+  }
+}
+
+Exception.prototype = new Error();
+
+exports["default"] = Exception;
+},{}],12:[function(require,module,exports){
+"use strict";
+var Utils = require("./utils");
+var Exception = require("./exception")["default"];
+var COMPILER_REVISION = require("./base").COMPILER_REVISION;
+var REVISION_CHANGES = require("./base").REVISION_CHANGES;
+var createFrame = require("./base").createFrame;
+
+function checkRevision(compilerInfo) {
+  var compilerRevision = compilerInfo && compilerInfo[0] || 1,
+      currentRevision = COMPILER_REVISION;
+
+  if (compilerRevision !== currentRevision) {
+    if (compilerRevision < currentRevision) {
+      var runtimeVersions = REVISION_CHANGES[currentRevision],
+          compilerVersions = REVISION_CHANGES[compilerRevision];
+      throw new Exception("Template was precompiled with an older version of Handlebars than the current runtime. "+
+            "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").");
+    } else {
+      // Use the embedded version info since the runtime doesn't know about this revision yet
+      throw new Exception("Template was precompiled with a newer version of Handlebars than the current runtime. "+
+            "Please update your runtime to a newer version ("+compilerInfo[1]+").");
+    }
+  }
+}
+
+exports.checkRevision = checkRevision;// TODO: Remove this line and break up compilePartial
+
+function template(templateSpec, env) {
+  /* istanbul ignore next */
+  if (!env) {
+    throw new Exception("No environment passed to template");
+  }
+  if (!templateSpec || !templateSpec.main) {
+    throw new Exception('Unknown template object: ' + typeof templateSpec);
+  }
+
+  // Note: Using env.VM references rather than local var references throughout this section to allow
+  // for external users to override these as psuedo-supported APIs.
+  env.VM.checkRevision(templateSpec.compiler);
+
+  var invokePartialWrapper = function(partial, indent, name, context, hash, helpers, partials, data, depths) {
+    if (hash) {
+      context = Utils.extend({}, context, hash);
+    }
+
+    var result = env.VM.invokePartial.call(this, partial, name, context, helpers, partials, data, depths);
+
+    if (result == null && env.compile) {
+      var options = { helpers: helpers, partials: partials, data: data, depths: depths };
+      partials[name] = env.compile(partial, { data: data !== undefined, compat: templateSpec.compat }, env);
+      result = partials[name](context, options);
+    }
+    if (result != null) {
+      if (indent) {
+        var lines = result.split('\n');
+        for (var i = 0, l = lines.length; i < l; i++) {
+          if (!lines[i] && i + 1 === l) {
+            break;
+          }
+
+          lines[i] = indent + lines[i];
+        }
+        result = lines.join('\n');
+      }
+      return result;
+    } else {
+      throw new Exception("The partial " + name + " could not be compiled when running in runtime-only mode");
+    }
+  };
+
+  // Just add water
+  var container = {
+    lookup: function(depths, name) {
+      var len = depths.length;
+      for (var i = 0; i < len; i++) {
+        if (depths[i] && depths[i][name] != null) {
+          return depths[i][name];
+        }
+      }
+    },
+    lambda: function(current, context) {
+      return typeof current === 'function' ? current.call(context) : current;
+    },
+
+    escapeExpression: Utils.escapeExpression,
+    invokePartial: invokePartialWrapper,
+
+    fn: function(i) {
+      return templateSpec[i];
+    },
+
+    programs: [],
+    program: function(i, data, depths) {
+      var programWrapper = this.programs[i],
+          fn = this.fn(i);
+      if (data || depths) {
+        programWrapper = program(this, i, fn, data, depths);
+      } else if (!programWrapper) {
+        programWrapper = this.programs[i] = program(this, i, fn);
+      }
+      return programWrapper;
+    },
+
+    data: function(data, depth) {
+      while (data && depth--) {
+        data = data._parent;
+      }
+      return data;
+    },
+    merge: function(param, common) {
+      var ret = param || common;
+
+      if (param && common && (param !== common)) {
+        ret = Utils.extend({}, common, param);
+      }
+
+      return ret;
+    },
+
+    noop: env.VM.noop,
+    compilerInfo: templateSpec.compiler
+  };
+
+  var ret = function(context, options) {
+    options = options || {};
+    var data = options.data;
+
+    ret._setup(options);
+    if (!options.partial && templateSpec.useData) {
+      data = initData(context, data);
+    }
+    var depths;
+    if (templateSpec.useDepths) {
+      depths = options.depths ? [context].concat(options.depths) : [context];
+    }
+
+    return templateSpec.main.call(container, context, container.helpers, container.partials, data, depths);
+  };
+  ret.isTop = true;
+
+  ret._setup = function(options) {
+    if (!options.partial) {
+      container.helpers = container.merge(options.helpers, env.helpers);
+
+      if (templateSpec.usePartial) {
+        container.partials = container.merge(options.partials, env.partials);
+      }
+    } else {
+      container.helpers = options.helpers;
+      container.partials = options.partials;
+    }
+  };
+
+  ret._child = function(i, data, depths) {
+    if (templateSpec.useDepths && !depths) {
+      throw new Exception('must pass parent depths');
+    }
+
+    return program(container, i, templateSpec[i], data, depths);
+  };
+  return ret;
+}
+
+exports.template = template;function program(container, i, fn, data, depths) {
+  var prog = function(context, options) {
+    options = options || {};
+
+    return fn.call(container, context, container.helpers, container.partials, options.data || data, depths && [context].concat(depths));
+  };
+  prog.program = i;
+  prog.depth = depths ? depths.length : 0;
+  return prog;
+}
+
+exports.program = program;function invokePartial(partial, name, context, helpers, partials, data, depths) {
+  var options = { partial: true, helpers: helpers, partials: partials, data: data, depths: depths };
+
+  if(partial === undefined) {
+    throw new Exception("The partial " + name + " could not be found");
+  } else if(partial instanceof Function) {
+    return partial(context, options);
+  }
+}
+
+exports.invokePartial = invokePartial;function noop() { return ""; }
+
+exports.noop = noop;function initData(context, data) {
+  if (!data || !('root' in data)) {
+    data = data ? createFrame(data) : {};
+    data.root = context;
+  }
+  return data;
+}
+},{"./base":10,"./exception":11,"./utils":14}],13:[function(require,module,exports){
+"use strict";
+// Build out our basic SafeString type
+function SafeString(string) {
+  this.string = string;
+}
+
+SafeString.prototype.toString = function() {
+  return "" + this.string;
+};
+
+exports["default"] = SafeString;
+},{}],14:[function(require,module,exports){
+"use strict";
+/*jshint -W004 */
+var SafeString = require("./safe-string")["default"];
+
+var escape = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#x27;",
+  "`": "&#x60;"
+};
+
+var badChars = /[&<>"'`]/g;
+var possible = /[&<>"'`]/;
+
+function escapeChar(chr) {
+  return escape[chr];
+}
+
+function extend(obj /* , ...source */) {
+  for (var i = 1; i < arguments.length; i++) {
+    for (var key in arguments[i]) {
+      if (Object.prototype.hasOwnProperty.call(arguments[i], key)) {
+        obj[key] = arguments[i][key];
+      }
+    }
+  }
+
+  return obj;
+}
+
+exports.extend = extend;var toString = Object.prototype.toString;
+exports.toString = toString;
+// Sourced from lodash
+// https://github.com/bestiejs/lodash/blob/master/LICENSE.txt
+var isFunction = function(value) {
+  return typeof value === 'function';
+};
+// fallback for older versions of Chrome and Safari
+/* istanbul ignore next */
+if (isFunction(/x/)) {
+  isFunction = function(value) {
+    return typeof value === 'function' && toString.call(value) === '[object Function]';
+  };
+}
+var isFunction;
+exports.isFunction = isFunction;
+/* istanbul ignore next */
+var isArray = Array.isArray || function(value) {
+  return (value && typeof value === 'object') ? toString.call(value) === '[object Array]' : false;
+};
+exports.isArray = isArray;
+
+function escapeExpression(string) {
+  // don't escape SafeStrings, since they're already safe
+  if (string instanceof SafeString) {
+    return string.toString();
+  } else if (string == null) {
+    return "";
+  } else if (!string) {
+    return string + '';
+  }
+
+  // Force a string conversion as this will be done by the append regardless and
+  // the regex test will do this transparently behind the scenes, causing issues if
+  // an object's to string has escaped characters in it.
+  string = "" + string;
+
+  if(!possible.test(string)) { return string; }
+  return string.replace(badChars, escapeChar);
+}
+
+exports.escapeExpression = escapeExpression;function isEmpty(value) {
+  if (!value && value !== 0) {
+    return true;
+  } else if (isArray(value) && value.length === 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+exports.isEmpty = isEmpty;function appendContextPath(contextPath, id) {
+  return (contextPath ? contextPath + '.' : '') + id;
+}
+
+exports.appendContextPath = appendContextPath;
+},{"./safe-string":13}],15:[function(require,module,exports){
+// Create a simple path alias to allow browserify to resolve
+// the runtime on a supported path.
+module.exports = require('./dist/cjs/handlebars.runtime');
+
+},{"./dist/cjs/handlebars.runtime":9}],16:[function(require,module,exports){
+module.exports = require("handlebars/runtime")["default"];
+
+},{"handlebars/runtime":15}],17:[function(require,module,exports){
+// hbsfy compiled Handlebars template
+var HandlebarsCompiler = require('hbsfy/runtime');
+module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partials,data) {
+  return "<span class=\"params-group\"></span>";
+  },"3":function(depth0,helpers,partials,data) {
+  var stack1, helperMissing=helpers.helperMissing, buffer = "";
+  stack1 = ((helpers.ifEqual || (depth0 && depth0.ifEqual) || helperMissing).call(depth0, (depth0 != null ? depth0.type : depth0), "text", {"name":"ifEqual","hash":{},"fn":this.program(4, data),"inverse":this.program(6, data),"data":data}));
+  if (stack1 != null) { buffer += stack1; }
+  return buffer;
+},"4":function(depth0,helpers,partials,data) {
+  var helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  return "<span>"
+    + escapeExpression(((helper = (helper = helpers.content || (depth0 != null ? depth0.content : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"content","hash":{},"data":data}) : helper)))
+    + "</span>";
+},"6":function(depth0,helpers,partials,data) {
+  var stack1, helperMissing=helpers.helperMissing, buffer = "";
+  stack1 = ((helpers.ifEqual || (depth0 && depth0.ifEqual) || helperMissing).call(depth0, (depth0 != null ? depth0.type : depth0), "boolean", {"name":"ifEqual","hash":{},"fn":this.program(7, data),"inverse":this.program(9, data),"data":data}));
+  if (stack1 != null) { buffer += stack1; }
+  return buffer;
+},"7":function(depth0,helpers,partials,data) {
+  var helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  return "<span class=\"boolean\">"
+    + escapeExpression(((helper = (helper = helpers.content || (depth0 != null ? depth0.content : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"content","hash":{},"data":data}) : helper)))
+    + "</span>";
+},"9":function(depth0,helpers,partials,data) {
+  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "<span\n        spellcheck=\"false\"\n        ";
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.editable : depth0), {"name":"if","hash":{},"fn":this.program(10, data),"inverse":this.noop,"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  buffer += "\n        class=\""
+    + escapeExpression(((helper = (helper = helpers.type || (depth0 != null ? depth0.type : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"type","hash":{},"data":data}) : helper)));
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.placeholder : depth0), {"name":"if","hash":{},"fn":this.program(12, data),"inverse":this.noop,"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  buffer += "\">";
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.value : depth0), {"name":"if","hash":{},"fn":this.program(14, data),"inverse":this.program(16, data),"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  return buffer + "</span>";
+},"10":function(depth0,helpers,partials,data) {
+  return "contenteditable=\"true\"";
+  },"12":function(depth0,helpers,partials,data) {
+  return " placeholder";
+  },"14":function(depth0,helpers,partials,data) {
+  var helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  return escapeExpression(((helper = (helper = helpers.value || (depth0 != null ? depth0.value : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"value","hash":{},"data":data}) : helper)));
+  },"16":function(depth0,helpers,partials,data) {
+  var helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression;
+  return escapeExpression(((helper = (helper = helpers.placeholder || (depth0 != null ? depth0.placeholder : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"placeholder","hash":{},"data":data}) : helper)));
+  },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
+  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "<span class=\"before\">"
+    + escapeExpression(((helper = (helper = helpers.before || (depth0 != null ? depth0.before : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"before","hash":{},"data":data}) : helper)))
+    + "</span>";
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.group : depth0), {"name":"if","hash":{},"fn":this.program(1, data),"inverse":this.program(3, data),"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  return buffer + "<span class=\"after\">"
+    + escapeExpression(((helper = (helper = helpers.after || (depth0 != null ? depth0.after : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"after","hash":{},"data":data}) : helper)))
+    + "</span>";
+},"useData":true});
+
+},{"hbsfy/runtime":16}],18:[function(require,module,exports){
+// hbsfy compiled Handlebars template
+var HandlebarsCompiler = require('hbsfy/runtime');
+module.exports = HandlebarsCompiler.template({"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
+  return "<form>\n  <div class=\"editor\">\n    <div class=\"params\">\n    </div>\n    <div class=\"buttons\">\n    </div>\n  </div>\n</form>";
+  },"useData":true});
+
+},{"hbsfy/runtime":16}],19:[function(require,module,exports){
 // We don't use the platform bootstrapper, so fake this stuff.
 
 window.Platform = {};
@@ -2709,3 +4219,4 @@ for (z in UIEventProto){
   });
 
 })();
+},{}]},{},[8]);

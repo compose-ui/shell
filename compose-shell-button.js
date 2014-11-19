@@ -1,4 +1,4 @@
-var template = require('./button.hbs')
+var template = require('./templates/button.hbs')
 
 xtag.register('compose-shell-button', {
   lifecycle: {

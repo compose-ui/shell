@@ -17,9 +17,10 @@
   </head>
   <body>
     <!-- Query a MongoDB collection -->
-    <compose-shell method="get" action="receive.html">
+    <compose-shell method="get">
+      <input type="hidden" value="blah">
       <compose-shell-param name="find" before="find(" after=")">
-        <compose-shell-param name="find[query]" before="{" after="}" type="hash" parser="bson"></compose-shell-param>
+        <compose-shell-param name="find[query]" required="true" before="{" after="}" type="hash" parser="bson"></compose-shell-param>
         <compose-shell-param name="find[fields]" before=",{" after="}" type="hash" hint="Fields" parser="bson"></compose-shell-param>
       </compose-shell-param>
       <compose-shell-param name="sort" before=".sort({" after="})" type="hash" parser="bson"></compose-shell-param>
@@ -39,14 +40,14 @@
     
     <!-- Query a MongoDB collection -->
     <compose-shell method="get" action="receive.html">
-      <compose-shell-param name="find" before="find(" after=")">
+      <compose-shell-param name="find" required="true" before="find(" after=")">
         <compose-shell-param name="find[query]" before="{" after="}" type="hash" parser="bson" value='{"_id": {"$oid": "4f6f21ed8b1e02ff593bdeb1"}}'></compose-shell-param>
-        <compose-shell-param name="find[fields]" before=",{" after="}" type="hash" hint="Fields" parser="bson"></compose-shell-param>
+        <compose-shell-param name="find[fields]" before=",{" after="}" type="hash" hint="Fields" parser="bson" value='{"yo": 1}'></compose-shell-param>
       </compose-shell-param>
       <compose-shell-param name="sort" before=".sort({" after="})" type="hash" parser="bson"></compose-shell-param>
-      <compose-shell-param name="skip" before=".skip(" after=")" type="number"></compose-shell-param>
+      <compose-shell-param name="skip" before=".skip(" after=")" type="number" value="5"></compose-shell-param>
       <compose-shell-param name="limit" before=".limit(" after=")" type="number" value="10"></compose-shell-param>
-      <compose-shell-param name="explain" type="boolean">.explain()</compose-shell-param>
+      <compose-shell-param name="explain" type="boolean" value="1">.explain()</compose-shell-param>
 
       <compose-shell-button toggle="find[fields]">fields{}</compose-shell-button>
       <compose-shell-button toggle="sort">sort()</compose-shell-button>
@@ -59,16 +60,16 @@
     <br>
 
     <!-- Create a MongoDB collection -->
-    <compose-shell method="get" action="receive.html" on-notify="Megatron.notify">
-      <compose-shell-param name="name" before="createCollection(" placeholder="name" type="string"></compose-shell-param>
-      <compose-shell-param name="capped" before=", { capped: true" after="}" optional type="boolean">
-        <compose-shell-param name="capped[size]" before=", size: " type="number"></compose-shell-param>
-        <compose-shell-param name="capped[max]" before=", max: " type="number" dependency="capped[size]"></compose-shell-param>
+    <compose-shell method="get" on-notify="Megatron.notify">
+      <compose-shell-param name="name" required="true" before="createCollection(" placeholder="name" type="string"></compose-shell-param>
+      <compose-shell-param name="options[capped]" before=", { capped: true" after="}" optional>
+        <compose-shell-param name="options[size]" before=", size: " type="number"></compose-shell-param>
+        <compose-shell-param name="options[max]" before=", max: " type="number" dependency="options[size]"></compose-shell-param>
       </compose-shell-param>
       <compose-shell-param type="text">)</compose-shell-param>
       
-      <compose-shell-button toggle="capped[size]">size</compose-shell-button>
-      <compose-shell-button toggle="capped[max]">max</compose-shell-button>
+      <compose-shell-button toggle="options[size]">size</compose-shell-button>
+      <compose-shell-button toggle="options[max]">max</compose-shell-button>
 
       <compose-shell-button type="submit">Create collection</compose-shell-button>
     </compose-shell>
@@ -77,9 +78,9 @@
     
     <!-- Create a MongoDB index -->
     <compose-shell method="get" action="receive.html">
-      <compose-shell-param name="key" before="ensureIndex({" after="}," type="hash" parser="bson"></compose-shell-param>
+      <compose-shell-param name="key" required="true" before="ensureIndex({" after="}," type="hash" parser="bson"></compose-shell-param>
       <compose-shell-param name="options" before="{ " after=" })">
-        <compose-shell-param name="options[background]" type="boolean">background: true</compose-shell-param>
+        <compose-shell-param name="options[background]" type="boolean" required="true">background: true</compose-shell-param>
         <compose-shell-param name="options[sparse]" before=", " type="boolean">sparse: true</compose-shell-param>
         <compose-shell-param name="options[unique]" before=", " type="boolean">unique: true</compose-shell-param>
         <compose-shell-param name="options[dropDups]" before=", " type="boolean" dependency="options[unique]">dropDups: true</compose-shell-param>

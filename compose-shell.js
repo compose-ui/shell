@@ -1,16 +1,24 @@
-var template = require('./shell.hbs')
+var template = require('./templates/shell.hbs')
 
 xtag.register('compose-shell', {
   lifecycle: {
     created: function(){
       var params = xtag.queryChildren(this, 'compose-shell-param')
       var buttons = xtag.queryChildren(this, 'compose-shell-button')
-      
+      var oldInputs = this.querySelectorAll('input,select,textarea')
+
       // Render the initial template
-      this.innerHTML = template({
-        action: this.action,
-        method: this.method
-      })
+      this.innerHTML = template()
+
+      for (var i in this.attributes) {
+        var name = this.attributes[i].nodeName
+        if (name)
+          this.form.setAttribute(name, this.attributes[i].value)
+      }
+
+      [].forEach.call(oldInputs, function(input){
+        this.form.appendChild(input)
+      }.bind(this))
       
       var paramsEl = this.querySelector('.params')
       for (var i in params) {
@@ -29,7 +37,8 @@ xtag.register('compose-shell', {
 
   events: {
     'submit:delegate(form)': function(event) {
-      event.currentTarget.submit()
+      console.log('form submit')
+      event.currentTarget.generateInputs()
     },
     'toggle:delegate(compose-shell-button)': function(event) {
       var toggle = event.target.getAttribute('toggle')
@@ -39,22 +48,33 @@ xtag.register('compose-shell', {
       if (param)
         param.toggle()
     },
-    'shown:delegate(compose-shell-param)': function(event){
+    'show:delegate(compose-shell-param)': function(event){
       var shell = event.currentTarget
       if (this.dependency && !shell.params[this.dependency].visible) {
         xtag.fireEvent(shell, 'notify', {detail: {message: this.name + ' requires ' + this.dependency}})
         shell.params[this.dependency].show()
       }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = true
     },
-    'hid:delegate(compose-shell-param)': function(event){
+    'hide:delegate(compose-shell-param)': function(event){
       var shell = event.currentTarget
       if (this.requiredBy && !this.visible && shell.params[this.requiredBy].visible) {
         shell.params[this.requiredBy].hide()
       }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = false
     },
     'keypress:keypass(13):delegate(compose-shell-param)': function(event){
       event.preventDefault()
-      event.currentTarget.submit()
+      var submitEvent = new Event('submit', {bubbles: true, cancelable: true})
+      var form = event.currentTarget.form
+      form.dispatchEvent(submitEvent)
+      setTimeout(function(){
+        if (!submitEvent.defaultPrevented) {
+          form.submit()
+        }
+      }, 50)
     },
     notify: function(event){
       if (this.onNotify)
@@ -63,8 +83,6 @@ xtag.register('compose-shell', {
   },
 
   accessors: {
-    action: { get: function(){ return this.getAttribute('action') } },
-    method: { get: function(){ return this.getAttribute('method') || 'GET' } },
     form: { get: function(){ return this.querySelector('form') } },
     onNotify: {
       get: function(){
@@ -80,22 +98,12 @@ xtag.register('compose-shell', {
       this.params[param.name] = param
       if (param.dependency && this.params[param.dependency])
         this.params[param.dependency].requiredBy = param.name
-      // this.associateButtonsAndParams(param.name)
     },
     registerButton: function(button){
       this.buttons = this.buttons || {}
       this.buttons[button.toggle] = button
-      this.associateButtonsAndParams(button.toggle)
-    },
-    associateButtonsAndParams: function(name){
-      if (this.params[name] && this.buttons[name]) {
-        this.buttons[name].param = this.params[name]
-        this.params[name].button = this.buttons[name]
-      }
-    },
-    submit: function() {
-      this.generateInputs()
-      this.form.submit()
+      if (this.params[button.toggle].visible)
+        button.enabled = true
     },
     generateInputs: function() {
       for (var name in this.params) {

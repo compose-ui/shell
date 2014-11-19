@@ -1,6 +1,6 @@
-var template = require('./param.hbs')
-var BSON = require('./bson')
-var cssAnimEventTypes = require('./anim-events')
+var template = require('./templates/param.hbs')
+var BSON = require('./lib/bson')
+var cssAnimEventTypes = require('./lib/anim-events')
 
 xtag.register('compose-shell-param', {
   lifecycle: {
@@ -19,24 +19,26 @@ xtag.register('compose-shell-param', {
         placeholder: this.placeholder
       })
 
+      this.hide()
+
       if (this.params.length > 0) {
-        var groupEl = this.querySelector('.group')
+        var groupEl = this.querySelector('.params-group')
         for (var param in this.params) {
           this.params[param].shell = this.shell
-          this.params[param].addEventListener('shown', this.updateVisibility.bind(this))
-          this.params[param].addEventListener('hid', this.updateVisibility.bind(this))
+          this.params[param].addEventListener('show', this.updateVisibility.bind(this))
+          this.params[param].addEventListener('hide', this.updateVisibility.bind(this))
           groupEl.appendChild(this.params[param])
+          // this.updateVisibility()
         }
       }
 
-      // set them again
       // this.params = xtag.queryChildren(this, 'compose-shell-param')
 
-      if (this.params.length === 0) {
+      if (this.type)
         this.shell.registerParam(this)
-      }
 
-      this.visible = this.determineVisibility()
+      if (this.type === 'text' || (this.getAttribute('value') || this.required))
+        this.visible = true
     }
   },
 
@@ -61,7 +63,7 @@ xtag.register('compose-shell-param', {
           this.className = this.className.replace('placeholder', '')
         }
     },
-    shown: function(event){
+    show: function(event){
       if (this.customInput)
         this.customInput.focus()
       if (this.hint)
@@ -75,6 +77,7 @@ xtag.register('compose-shell-param', {
     type: { get: function(){ return this.getAttribute('type') } },
     placeholder: { get: function(){ return this.getAttribute('placeholder') } },
     hint: { get: function(){ return this.getAttribute('hint') } },
+    required: { get: function(){ return this.getAttribute('required') } },
     // group: { get: function() { return this.params.length > 0 } },
     editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
     optional: { get: function(){ return !!this.getAttribute('optional') } },
@@ -86,14 +89,10 @@ xtag.register('compose-shell-param', {
       set: function(visible){
         if (visible === true) {
           this.removeAttribute('hidden')
-          xtag.fireEvent(this, 'shown')
-          if (this.button)
-            this.button.enabled = true
+          xtag.fireEvent(this, 'show')
         } else if (visible === false) {
           this.setAttribute('hidden', true)
-          xtag.fireEvent(this, 'hid')
-          if (this.button)
-            this.button.enabled = false
+          xtag.fireEvent(this, 'hide')
         }
       }
     },
@@ -101,7 +100,11 @@ xtag.register('compose-shell-param', {
     value: {
       get: function(){
         var val;
-        if (this.customInput) {
+        if (!this.visible)
+          return null // no value
+        if (this.type === 'boolean') {
+          val = 1
+        } else if (this.customInput) {
           // ensure stuff by blurring.
           this.customInput.blur()
 
@@ -111,19 +114,9 @@ xtag.register('compose-shell-param', {
               val = ""
           }
           if (val && this.type === 'hash')
-            val = '{'+val+'}'
-        } else if (this.type === 'boolean') {
-          val = this.visible ? 1 : 0
+            val = '{' + val + '}'
         }
         return this.serializeValue(val)
-      }
-    },
-
-    button: {
-      get: function(){ return this._button },
-      set: function(button){
-        this._button = button
-        this.visible = this.determineVisibility()
       }
     }
   },
@@ -133,17 +126,12 @@ xtag.register('compose-shell-param', {
       // Pass through
       this.shell.registerParam(param)
     },
-    toggle: function(){
-      this.visible = !this.visible
-    },
-    show: function(){
-      this.visible = true
-    },
-    hide: function(){
-      this.visible = false
-    },
+    toggle: function(){ this.visible = !this.visible },
+    show: function(){ this.visible = true },
+    hide: function(){ this.visible = false },
+    
     updateVisibility: function(){
-      this.visible = this.determineVisibility()
+      this.visible = [].some.call(this.params, function(child){ return child.visible })
     },
 
     showHint: function(){
@@ -189,26 +177,6 @@ xtag.register('compose-shell-param', {
         } catch (error) {
           console.log(error)
           return value
-        }
-      }
-    },
-
-    determineVisibility: function(){
-      if (this.type === 'text')
-        return true
-      if (this.group) {
-        var hasOneVisible = false
-        for (var i in this.params) {
-          if (this.params[i].visible) {
-            hasOneVisible = true
-          }
-        }
-        return hasOneVisible
-      } else {
-        if (this.button) {
-          return this.button.enabled
-        } else {
-          return !this.optional && this.value
         }
       }
     }
