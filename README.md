@@ -44,13 +44,15 @@ Within your site, you need a structure similar to this:
 </compose-shell>
 ```
 
+There's a lot more examples of this in the `examples.html` file. If you pull/download the repository, you can load the file up in a browser and it should work fine.
+
 ### `<compose-shell>`
 
 The parent tag contains the whole shell parameters and buttons (more on this below.)
 
 **Any attributes passed to it will be applied to the `form` that'll be submitted**
 
-### `<compose-param>`
+### `<compose-shell-param>`
 
 ... can either be a standalone param or a group of params.
 
