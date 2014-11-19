@@ -1,4 +1,382 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var template = require('./templates/button.hbs')
+
+xtag.register('compose-shell-button', {
+  lifecycle: {
+    created: function(){
+      this.type = this.getAttribute('type')
+      this.innerHTML = template({
+        enabled: this.enabled,
+        type: this.type,
+        content: this.textContent
+      })
+      if (this.type !== 'submit')
+        this.shell.registerButton(this)
+    }
+  },
+
+  events: {
+    'click:delegate(button)': function(event) {
+      var button = event.currentTarget
+      if (button.type === 'submit')
+        return
+      event.preventDefault()
+      event.currentTarget.enabled = !event.currentTarget.enabled
+      xtag.fireEvent(button, 'toggle')
+    }
+  },
+
+  accessors: {
+    enabled: {
+      get: function(){ return !!this.getAttribute('enabled') },
+      set: function(enabled){
+        if (enabled === true)
+          this.setAttribute('enabled', true)
+        else if (enabled === false)
+          this.removeAttribute('enabled')
+      }
+    },
+    toggle: {
+      get: function(){ return this.getAttribute('toggle') }
+    }
+  }
+})
+},{"./templates/button.hbs":16}],2:[function(require,module,exports){
+var template = require('./templates/param.hbs')
+var BSON = require('./lib/bson')
+var cssAnimEventTypes = require('./lib/anim-events')
+
+xtag.register('compose-shell-param', {
+  lifecycle: {
+    created: function(){
+      this.params = xtag.queryChildren(this, 'compose-shell-param')
+      this.group = !!this.params.length
+
+      this.innerHTML = template({
+        before: this.getAttribute('before'),
+        group: this.group,
+        editable: this.editable,
+        value: this.parseValue(this.getAttribute('value')),
+        type: this.type,
+        content: this.textContent,
+        after: this.getAttribute('after'),
+        placeholder: this.placeholder
+      })
+
+      this.hide()
+
+      if (this.params.length > 0) {
+        var groupEl = this.querySelector('.params-group')
+        for (var param in this.params) {
+          this.params[param].shell = this.shell
+          this.params[param].addEventListener('show', this.updateVisibility.bind(this))
+          this.params[param].addEventListener('hide', this.updateVisibility.bind(this))
+          groupEl.appendChild(this.params[param])
+          // this.updateVisibility()
+        }
+      }
+
+      // this.params = xtag.queryChildren(this, 'compose-shell-param')
+
+      if (this.type)
+        this.shell.registerParam(this)
+
+      if (this.type === 'text' || (this.getAttribute('value') || this.required))
+        this.visible = true
+    }
+  },
+
+  events: {
+    'focus:delegate(span[contenteditable])': function(event) {
+      var param = event.currentTarget
+      if (param.group) return
+      if (param.placeholder) {
+        if (this.textContent === param.placeholder && /placeholder/.test(this.className))
+          this.textContent = ''
+      }
+    },
+    'blur:delegate(span[contenteditable])': function(event) {
+      var param = event.currentTarget
+      if (param.group) return
+      if (param.placeholder)
+        if (this.textContent === '') {
+          this.textContent = param.placeholder
+          if (!/placeholder/.test(this.className))
+            this.className += ' placeholder'
+        } else {
+          this.className = this.className.replace('placeholder', '')
+        }
+    },
+    show: function(event){
+      if (this.customInput)
+        this.customInput.focus()
+      if (this.hint)
+        this.showHint()
+    }
+  },
+
+  accessors: {
+    // params: { get: function(){ return xtag.queryChildren(this, 'compose-shell-param') } },
+    name: { get: function(){ return this.getAttribute('name') } },
+    type: { get: function(){ return this.getAttribute('type') } },
+    placeholder: { get: function(){ return this.getAttribute('placeholder') } },
+    hint: { get: function(){ return this.getAttribute('hint') } },
+    required: { get: function(){ return this.getAttribute('required') } },
+    // group: { get: function() { return this.params.length > 0 } },
+    editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
+    optional: { get: function(){ return !!this.getAttribute('optional') } },
+    dependency: { get: function(){ return this.getAttribute('dependency') } },
+    customInput: { get: function() { return this.querySelector('span[contenteditable]') } },
+    parser: { get: function() { return this.getAttribute('parser') } },
+    visible: {
+      get: function(){ return !this.getAttribute('hidden') },
+      set: function(visible){
+        if (visible === true) {
+          this.removeAttribute('hidden')
+          xtag.fireEvent(this, 'show')
+        } else if (visible === false) {
+          this.setAttribute('hidden', true)
+          xtag.fireEvent(this, 'hide')
+        }
+      }
+    },
+
+    value: {
+      get: function(){
+        var val;
+        if (!this.visible)
+          return null // no value
+        if (this.type === 'boolean') {
+          val = 1
+        } else if (this.customInput) {
+          // ensure stuff by blurring.
+          this.customInput.blur()
+
+          val = this.customInput.textContent
+          if (this.placeholder) {
+            if (/placeholder/.test(this.customInput.className) && val === this.placeholder)
+              val = ""
+          }
+          if (val && this.type === 'hash')
+            val = '{' + val + '}'
+        }
+        return this.serializeValue(val)
+      }
+    }
+  },
+
+  methods: {
+    registerParam: function(param){
+      // Pass through
+      this.shell.registerParam(param)
+    },
+    toggle: function(){ this.visible = !this.visible },
+    show: function(){ this.visible = true },
+    hide: function(){ this.visible = false },
+    
+    updateVisibility: function(){
+      this.visible = [].some.call(this.params, function(child){ return child.visible })
+    },
+
+    showHint: function(){
+      var hintEl = this.querySelector('.hint')
+      if (hintEl)
+        this.removeChild(hintEl)
+      
+      hintEl = document.createElement('span')
+      hintEl.className = 'hint'
+      hintEl.textContent = this.hint
+
+      clearTimeout(this.hintTimeout)
+      this.appendChild(hintEl)
+      this.hintTimeout = setTimeout(function(){
+        hintEl.className += ' out'
+        hintEl.addEventListener(cssAnimEventTypes.end, function animEnd(event){
+          this.removeChild(hintEl)
+          hintEl.removeEventListener(cssAnimEventTypes.end, animEnd)
+        }.bind(this), false)
+      }.bind(this), 2000)
+    },
+
+    serializeValue: function(value){
+      if (!this.parser)
+        return value
+
+      if (this.parser === 'bson') {
+        try {
+          return JSON.stringify(BSON.bsonEval(value))
+        } catch (error) {
+          console.log(error)
+          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unparsable value for ' + this.name)}})
+        }
+      }
+    },
+    
+    parseValue: function(value){
+      if (!this.parser)
+        return value
+      if (this.parser === 'bson' && value) {
+        try {
+          return stripWrapper(BSON.toBsonString(JSON.parse(value), {indentation: 0}))
+        } catch (error) {
+          console.log(error)
+          return value
+        }
+      }
+    }
+  }
+})
+
+function stripWrapper(queryString) {
+  var matches = queryString.match(/\{(.+)\}/)
+  if (matches)
+    return matches[1]
+}
+},{"./lib/anim-events":5,"./lib/bson":6,"./templates/param.hbs":17}],3:[function(require,module,exports){
+var template = require('./templates/shell.hbs')
+
+xtag.register('compose-shell', {
+  lifecycle: {
+    created: function(){
+      var params = xtag.queryChildren(this, 'compose-shell-param')
+      var buttons = xtag.queryChildren(this, 'compose-shell-button')
+      var oldInputs = this.querySelectorAll('input,select,textarea')
+
+      // Render the initial template
+      this.innerHTML = template()
+
+      for (var i in this.attributes) {
+        var name = this.attributes[i].nodeName
+        if (name)
+          this.form.setAttribute(name, this.attributes[i].value)
+      }
+
+      [].forEach.call(oldInputs, function(input){
+        this.form.appendChild(input)
+      }.bind(this))
+      
+      var paramsEl = this.querySelector('.params')
+      for (var i in params) {
+        params[i].shell = this
+        paramsEl.appendChild(params[i])
+      }
+      
+      var buttonsEl = this.querySelector('.buttons')
+      for (var i in buttons) {
+        buttons[i].shell = this
+        buttonsEl.appendChild(buttons[i])
+      }
+
+    }
+  },
+
+  events: {
+    'submit:delegate(form)': function(event) {
+      console.log('form submit')
+      event.currentTarget.generateInputs()
+    },
+    'toggle:delegate(compose-shell-button)': function(event) {
+      var toggle = event.target.getAttribute('toggle')
+
+      var shell = event.currentTarget
+      var param = shell.params[toggle]
+      if (param)
+        param.toggle()
+    },
+    'show:delegate(compose-shell-param)': function(event){
+      var shell = event.currentTarget
+      if (this.dependency && !shell.params[this.dependency].visible) {
+        xtag.fireEvent(shell, 'notify', {detail: {message: this.name + ' requires ' + this.dependency}})
+        shell.params[this.dependency].show()
+      }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = true
+    },
+    'hide:delegate(compose-shell-param)': function(event){
+      var shell = event.currentTarget
+      if (this.requiredBy && !this.visible && shell.params[this.requiredBy].visible) {
+        shell.params[this.requiredBy].hide()
+      }
+      if (shell.buttons && shell.buttons[this.name])
+        shell.buttons[this.name].enabled = false
+    },
+    'keypress:keypass(13):delegate(compose-shell-param)': function(event){
+      event.preventDefault()
+      var submitEvent = new Event('submit', {bubbles: true, cancelable: true})
+      var form = event.currentTarget.form
+      form.dispatchEvent(submitEvent)
+      setTimeout(function(){
+        if (!submitEvent.defaultPrevented) {
+          form.submit()
+        }
+      }, 50)
+    },
+    notify: function(event){
+      if (this.onNotify)
+        this.onNotify(event.detail.message)
+    }
+  },
+
+  accessors: {
+    form: { get: function(){ return this.querySelector('form') } },
+    onNotify: {
+      get: function(){
+        var notify = this.getAttribute('on-notify')
+        return notify && eval(notify) || false
+      }
+    }
+  },
+
+  methods: {
+    registerParam: function(param){
+      this.params = this.params || {}
+      this.params[param.name] = param
+      if (param.dependency && this.params[param.dependency])
+        this.params[param.dependency].requiredBy = param.name
+    },
+    registerButton: function(button){
+      this.buttons = this.buttons || {}
+      this.buttons[button.toggle] = button
+      if (this.params[button.toggle].visible)
+        button.enabled = true
+    },
+    generateInputs: function() {
+      for (var name in this.params) {
+        if (this.params[name].value) {
+          var input = document.createElement('input')
+          input.type = 'hidden'
+          input.value = this.params[name].value
+          input.name = name
+          this.form.appendChild(input)
+        }
+      }
+    }
+  }
+})
+},{"./templates/shell.hbs":18}],4:[function(require,module,exports){
+require('./vendor/x-tag-core')
+
+var Handlebars = require('hbsfy/runtime')
+Handlebars.registerHelper('ifEqual', function(v1, v2, options) {
+  if (v1 === v2) {
+    return options.fn(this)
+  }
+  return options.inverse(this)
+})
+
+require('./compose-shell')
+require('./compose-shell-param')
+require('./compose-shell-button')
+
+document.addEventListener('page:load', function(){
+  var shells = document.body.querySelectorAll('compose-shell')
+  for (var i in shells) {
+    var shell = shells[i]
+    if (shell.parentNode)
+      shell.parentNode.replaceChild(document.importNode(shell, true), shell)
+  }
+})
+},{"./compose-shell":3,"./compose-shell-button":1,"./compose-shell-param":2,"./vendor/x-tag-core":19,"hbsfy/runtime":15}],5:[function(require,module,exports){
 module.exports = getAnimationEventTypes()
 
 function camelCaseEventTypes(prefix) {
@@ -51,7 +429,7 @@ function getAnimationEventTypes() {
 
   return {};
 }
-},{}],2:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var dateFormat = require("./date.format");
 
 module.exports = {
@@ -319,378 +697,7 @@ module.exports = {
     }
   }
 };
-},{"./date.format":7}],3:[function(require,module,exports){
-// hbsfy compiled Handlebars template
-var HandlebarsCompiler = require('hbsfy/runtime');
-module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partials,data) {
-  return "enabled";
-  },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
-  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "<button\n  class=\"";
-  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.enabled : depth0), {"name":"if","hash":{},"fn":this.program(1, data),"inverse":this.noop,"data":data});
-  if (stack1 != null) { buffer += stack1; }
-  return buffer + "\"\n  type=\""
-    + escapeExpression(((helper = (helper = helpers.type || (depth0 != null ? depth0.type : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"type","hash":{},"data":data}) : helper)))
-    + "\">"
-    + escapeExpression(((helper = (helper = helpers.content || (depth0 != null ? depth0.content : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"content","hash":{},"data":data}) : helper)))
-    + "</button>";
-},"useData":true});
-
-},{"hbsfy/runtime":16}],4:[function(require,module,exports){
-var template = require('./button.hbs')
-
-xtag.register('compose-shell-button', {
-  lifecycle: {
-    created: function(){
-      this.type = this.getAttribute('type')
-      this.innerHTML = template({
-        enabled: this.enabled,
-        type: this.type,
-        content: this.textContent
-      })
-      if (this.type !== 'submit')
-        this.shell.registerButton(this)
-    }
-  },
-
-  events: {
-    'click:delegate(button)': function(event) {
-      var button = event.currentTarget
-      if (button.type === 'submit')
-        return
-      event.preventDefault()
-      event.currentTarget.enabled = !event.currentTarget.enabled
-      xtag.fireEvent(button, 'toggle')
-    }
-  },
-
-  accessors: {
-    enabled: {
-      get: function(){ return !!this.getAttribute('enabled') },
-      set: function(enabled){
-        if (enabled === true)
-          this.setAttribute('enabled', true)
-        else if (enabled === false)
-          this.removeAttribute('enabled')
-      }
-    },
-    toggle: {
-      get: function(){ return this.getAttribute('toggle') }
-    }
-  }
-})
-},{"./button.hbs":3}],5:[function(require,module,exports){
-var template = require('./param.hbs')
-var BSON = require('./bson')
-var cssAnimEventTypes = require('./anim-events')
-
-xtag.register('compose-shell-param', {
-  lifecycle: {
-    created: function(){
-      this.params = xtag.queryChildren(this, 'compose-shell-param')
-      this.group = !!this.params.length
-
-      this.innerHTML = template({
-        before: this.getAttribute('before'),
-        group: this.group,
-        editable: this.editable,
-        value: this.parseValue(this.getAttribute('value')),
-        type: this.type,
-        content: this.textContent,
-        after: this.getAttribute('after'),
-        placeholder: this.placeholder
-      })
-
-      this.hide()
-
-      if (this.params.length > 0) {
-        var groupEl = this.querySelector('.params-group')
-        for (var param in this.params) {
-          this.params[param].shell = this.shell
-          this.params[param].addEventListener('show', this.updateVisibility.bind(this))
-          this.params[param].addEventListener('hide', this.updateVisibility.bind(this))
-          groupEl.appendChild(this.params[param])
-          // this.updateVisibility()
-        }
-      }
-
-      // this.params = xtag.queryChildren(this, 'compose-shell-param')
-
-      if (this.type)
-        this.shell.registerParam(this)
-
-      if (this.type === 'text' || (this.getAttribute('value') || this.required))
-        this.visible = true
-    }
-  },
-
-  events: {
-    'focus:delegate(span[contenteditable])': function(event) {
-      var param = event.currentTarget
-      if (param.group) return
-      if (param.placeholder) {
-        if (this.textContent === param.placeholder && /placeholder/.test(this.className))
-          this.textContent = ''
-      }
-    },
-    'blur:delegate(span[contenteditable])': function(event) {
-      var param = event.currentTarget
-      if (param.group) return
-      if (param.placeholder)
-        if (this.textContent === '') {
-          this.textContent = param.placeholder
-          if (!/placeholder/.test(this.className))
-            this.className += ' placeholder'
-        } else {
-          this.className = this.className.replace('placeholder', '')
-        }
-    },
-    show: function(event){
-      if (this.customInput)
-        this.customInput.focus()
-      if (this.hint)
-        this.showHint()
-    }
-  },
-
-  accessors: {
-    // params: { get: function(){ return xtag.queryChildren(this, 'compose-shell-param') } },
-    name: { get: function(){ return this.getAttribute('name') } },
-    type: { get: function(){ return this.getAttribute('type') } },
-    placeholder: { get: function(){ return this.getAttribute('placeholder') } },
-    hint: { get: function(){ return this.getAttribute('hint') } },
-    required: { get: function(){ return this.getAttribute('required') } },
-    // group: { get: function() { return this.params.length > 0 } },
-    editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
-    optional: { get: function(){ return !!this.getAttribute('optional') } },
-    dependency: { get: function(){ return this.getAttribute('dependency') } },
-    customInput: { get: function() { return this.querySelector('span[contenteditable]') } },
-    parser: { get: function() { return this.getAttribute('parser') } },
-    visible: {
-      get: function(){ return !this.getAttribute('hidden') },
-      set: function(visible){
-        if (visible === true) {
-          this.removeAttribute('hidden')
-          xtag.fireEvent(this, 'show')
-        } else if (visible === false) {
-          this.setAttribute('hidden', true)
-          xtag.fireEvent(this, 'hide')
-        }
-      }
-    },
-
-    value: {
-      get: function(){
-        var val;
-        if (!this.visible)
-          return null // no value
-        if (this.type === 'boolean') {
-          val = 1
-        } else if (this.customInput) {
-          // ensure stuff by blurring.
-          this.customInput.blur()
-
-          val = this.customInput.textContent
-          if (this.placeholder) {
-            if (/placeholder/.test(this.customInput.className) && val === this.placeholder)
-              val = ""
-          }
-          if (val && this.type === 'hash')
-            val = '{' + val + '}'
-        }
-        return this.serializeValue(val)
-      }
-    }
-  },
-
-  methods: {
-    registerParam: function(param){
-      // Pass through
-      this.shell.registerParam(param)
-    },
-    toggle: function(){ this.visible = !this.visible },
-    show: function(){ this.visible = true },
-    hide: function(){ this.visible = false },
-    
-    updateVisibility: function(){
-      this.visible = [].some.call(this.params, function(child){ return child.visible })
-    },
-
-    showHint: function(){
-      var hintEl = this.querySelector('.hint')
-      if (hintEl)
-        this.removeChild(hintEl)
-      
-      hintEl = document.createElement('span')
-      hintEl.className = 'hint'
-      hintEl.textContent = this.hint
-
-      clearTimeout(this.hintTimeout)
-      this.appendChild(hintEl)
-      this.hintTimeout = setTimeout(function(){
-        hintEl.className += ' out'
-        hintEl.addEventListener(cssAnimEventTypes.end, function animEnd(event){
-          this.removeChild(hintEl)
-          hintEl.removeEventListener(cssAnimEventTypes.end, animEnd)
-        }.bind(this), false)
-      }.bind(this), 2000)
-    },
-
-    serializeValue: function(value){
-      if (!this.parser)
-        return value
-
-      if (this.parser === 'bson') {
-        try {
-          return JSON.stringify(BSON.bsonEval(value))
-        } catch (error) {
-          console.log(error)
-          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unparsable value for ' + this.name)}})
-        }
-      }
-    },
-    
-    parseValue: function(value){
-      if (!this.parser)
-        return value
-      if (this.parser === 'bson' && value) {
-        try {
-          return stripWrapper(BSON.toBsonString(JSON.parse(value), {indentation: 0}))
-        } catch (error) {
-          console.log(error)
-          return value
-        }
-      }
-    }
-  }
-})
-
-function stripWrapper(queryString) {
-  var matches = queryString.match(/\{(.+)\}/)
-  if (matches)
-    return matches[1]
-}
-},{"./anim-events":1,"./bson":2,"./param.hbs":17}],6:[function(require,module,exports){
-var template = require('./shell.hbs')
-
-xtag.register('compose-shell', {
-  lifecycle: {
-    created: function(){
-      var params = xtag.queryChildren(this, 'compose-shell-param')
-      var buttons = xtag.queryChildren(this, 'compose-shell-button')
-      var oldInputs = this.querySelectorAll('input,select,textarea')
-
-      // Render the initial template
-      this.innerHTML = template()
-
-      for (var i in this.attributes) {
-        var name = this.attributes[i].nodeName
-        if (name)
-          this.form.setAttribute(name, this.attributes[i].value)
-      }
-
-      [].forEach.call(oldInputs, function(input){
-        this.form.appendChild(input)
-      }.bind(this))
-      
-      var paramsEl = this.querySelector('.params')
-      for (var i in params) {
-        params[i].shell = this
-        paramsEl.appendChild(params[i])
-      }
-      
-      var buttonsEl = this.querySelector('.buttons')
-      for (var i in buttons) {
-        buttons[i].shell = this
-        buttonsEl.appendChild(buttons[i])
-      }
-
-    }
-  },
-
-  events: {
-    'submit:delegate(form)': function(event) {
-      console.log('form submit')
-      event.currentTarget.generateInputs()
-    },
-    'toggle:delegate(compose-shell-button)': function(event) {
-      var toggle = event.target.getAttribute('toggle')
-
-      var shell = event.currentTarget
-      var param = shell.params[toggle]
-      if (param)
-        param.toggle()
-    },
-    'show:delegate(compose-shell-param)': function(event){
-      var shell = event.currentTarget
-      if (this.dependency && !shell.params[this.dependency].visible) {
-        xtag.fireEvent(shell, 'notify', {detail: {message: this.name + ' requires ' + this.dependency}})
-        shell.params[this.dependency].show()
-      }
-      if (shell.buttons && shell.buttons[this.name])
-        shell.buttons[this.name].enabled = true
-    },
-    'hide:delegate(compose-shell-param)': function(event){
-      var shell = event.currentTarget
-      if (this.requiredBy && !this.visible && shell.params[this.requiredBy].visible) {
-        shell.params[this.requiredBy].hide()
-      }
-      if (shell.buttons && shell.buttons[this.name])
-        shell.buttons[this.name].enabled = false
-    },
-    'keypress:keypass(13):delegate(compose-shell-param)': function(event){
-      event.preventDefault()
-      var submitEvent = new Event('submit', {bubbles: true, cancelable: true})
-      var form = event.currentTarget.form
-      form.dispatchEvent(submitEvent)
-      setTimeout(function(){
-        if (!submitEvent.defaultPrevented) {
-          form.submit()
-        }
-      }, 50)
-    },
-    notify: function(event){
-      if (this.onNotify)
-        this.onNotify(event.detail.message)
-    }
-  },
-
-  accessors: {
-    form: { get: function(){ return this.querySelector('form') } },
-    onNotify: {
-      get: function(){
-        var notify = this.getAttribute('on-notify')
-        return notify && eval(notify) || false
-      }
-    }
-  },
-
-  methods: {
-    registerParam: function(param){
-      this.params = this.params || {}
-      this.params[param.name] = param
-      if (param.dependency && this.params[param.dependency])
-        this.params[param.dependency].requiredBy = param.name
-    },
-    registerButton: function(button){
-      this.buttons = this.buttons || {}
-      this.buttons[button.toggle] = button
-      if (this.params[button.toggle].visible)
-        button.enabled = true
-    },
-    generateInputs: function() {
-      for (var name in this.params) {
-        if (this.params[name].value) {
-          var input = document.createElement('input')
-          input.type = 'hidden'
-          input.value = this.params[name].value
-          input.name = name
-          this.form.appendChild(input)
-        }
-      }
-    }
-  }
-})
-},{"./shell.hbs":18}],7:[function(require,module,exports){
+},{"./date.format":7}],7:[function(require,module,exports){
 /*
  * Date Format 1.2.3
  * (c) 2007-2009 Steven Levithan <stevenlevithan.com>
@@ -820,29 +827,6 @@ Date.prototype.format = function (mask, utc) {
 
 module.exports = dateFormat;
 },{}],8:[function(require,module,exports){
-require('./vendor/x-tag-core')
-
-var Handlebars = require('hbsfy/runtime')
-Handlebars.registerHelper('ifEqual', function(v1, v2, options) {
-  if (v1 === v2) {
-    return options.fn(this)
-  }
-  return options.inverse(this)
-})
-
-require('./compose-shell')
-require('./compose-shell-param')
-require('./compose-shell-button')
-
-document.addEventListener('page:load', function(){
-  var shells = document.body.querySelectorAll('compose-shell')
-  for (var i in shells) {
-    var shell = shells[i]
-    if (shell.parentNode)
-      shell.parentNode.replaceChild(document.importNode(shell, true), shell)
-  }
-})
-},{"./compose-shell":6,"./compose-shell-button":4,"./compose-shell-param":5,"./vendor/x-tag-core":19,"hbsfy/runtime":16}],9:[function(require,module,exports){
 "use strict";
 /*globals Handlebars: true */
 var base = require("./handlebars/base");
@@ -878,7 +862,7 @@ Handlebars.create = create;
 Handlebars['default'] = Handlebars;
 
 exports["default"] = Handlebars;
-},{"./handlebars/base":10,"./handlebars/exception":11,"./handlebars/runtime":12,"./handlebars/safe-string":13,"./handlebars/utils":14}],10:[function(require,module,exports){
+},{"./handlebars/base":9,"./handlebars/exception":10,"./handlebars/runtime":11,"./handlebars/safe-string":12,"./handlebars/utils":13}],9:[function(require,module,exports){
 "use strict";
 var Utils = require("./utils");
 var Exception = require("./exception")["default"];
@@ -1110,7 +1094,7 @@ var createFrame = function(object) {
   return frame;
 };
 exports.createFrame = createFrame;
-},{"./exception":11,"./utils":14}],11:[function(require,module,exports){
+},{"./exception":10,"./utils":13}],10:[function(require,module,exports){
 "use strict";
 
 var errorProps = ['description', 'fileName', 'lineNumber', 'message', 'name', 'number', 'stack'];
@@ -1139,7 +1123,7 @@ function Exception(message, node) {
 Exception.prototype = new Error();
 
 exports["default"] = Exception;
-},{}],12:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 var Utils = require("./utils");
 var Exception = require("./exception")["default"];
@@ -1333,7 +1317,7 @@ exports.noop = noop;function initData(context, data) {
   }
   return data;
 }
-},{"./base":10,"./exception":11,"./utils":14}],13:[function(require,module,exports){
+},{"./base":9,"./exception":10,"./utils":13}],12:[function(require,module,exports){
 "use strict";
 // Build out our basic SafeString type
 function SafeString(string) {
@@ -1345,7 +1329,7 @@ SafeString.prototype.toString = function() {
 };
 
 exports["default"] = SafeString;
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict";
 /*jshint -W004 */
 var SafeString = require("./safe-string")["default"];
@@ -1434,15 +1418,31 @@ exports.isEmpty = isEmpty;function appendContextPath(contextPath, id) {
 }
 
 exports.appendContextPath = appendContextPath;
-},{"./safe-string":13}],15:[function(require,module,exports){
+},{"./safe-string":12}],14:[function(require,module,exports){
 // Create a simple path alias to allow browserify to resolve
 // the runtime on a supported path.
 module.exports = require('./dist/cjs/handlebars.runtime');
 
-},{"./dist/cjs/handlebars.runtime":9}],16:[function(require,module,exports){
+},{"./dist/cjs/handlebars.runtime":8}],15:[function(require,module,exports){
 module.exports = require("handlebars/runtime")["default"];
 
-},{"handlebars/runtime":15}],17:[function(require,module,exports){
+},{"handlebars/runtime":14}],16:[function(require,module,exports){
+// hbsfy compiled Handlebars template
+var HandlebarsCompiler = require('hbsfy/runtime');
+module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partials,data) {
+  return "enabled";
+  },"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
+  var stack1, helper, functionType="function", helperMissing=helpers.helperMissing, escapeExpression=this.escapeExpression, buffer = "<button\n  class=\"";
+  stack1 = helpers['if'].call(depth0, (depth0 != null ? depth0.enabled : depth0), {"name":"if","hash":{},"fn":this.program(1, data),"inverse":this.noop,"data":data});
+  if (stack1 != null) { buffer += stack1; }
+  return buffer + "\"\n  type=\""
+    + escapeExpression(((helper = (helper = helpers.type || (depth0 != null ? depth0.type : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"type","hash":{},"data":data}) : helper)))
+    + "\">"
+    + escapeExpression(((helper = (helper = helpers.content || (depth0 != null ? depth0.content : depth0)) != null ? helper : helperMissing),(typeof helper === functionType ? helper.call(depth0, {"name":"content","hash":{},"data":data}) : helper)))
+    + "</button>";
+},"useData":true});
+
+},{"hbsfy/runtime":15}],17:[function(require,module,exports){
 // hbsfy compiled Handlebars template
 var HandlebarsCompiler = require('hbsfy/runtime');
 module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partials,data) {
@@ -1500,14 +1500,14 @@ module.exports = HandlebarsCompiler.template({"1":function(depth0,helpers,partia
     + "</span>";
 },"useData":true});
 
-},{"hbsfy/runtime":16}],18:[function(require,module,exports){
+},{"hbsfy/runtime":15}],18:[function(require,module,exports){
 // hbsfy compiled Handlebars template
 var HandlebarsCompiler = require('hbsfy/runtime');
 module.exports = HandlebarsCompiler.template({"compiler":[6,">= 2.0.0-beta.1"],"main":function(depth0,helpers,partials,data) {
   return "<form>\n  <div class=\"editor\">\n    <div class=\"params\">\n    </div>\n    <div class=\"buttons\">\n    </div>\n  </div>\n</form>";
   },"useData":true});
 
-},{"hbsfy/runtime":16}],19:[function(require,module,exports){
+},{"hbsfy/runtime":15}],19:[function(require,module,exports){
 // We don't use the platform bootstrapper, so fake this stuff.
 
 window.Platform = {};
@@ -4219,4 +4219,4 @@ for (z in UIEventProto){
   });
 
 })();
-},{}]},{},[8]);
+},{}]},{},[4]);
