@@ -9,6 +9,8 @@ xtag.register('compose-shell-button', {
         type: this.type,
         content: this.textContent
       })
+    },
+    inserted: function(){
       if (this.type !== 'submit')
         this.shell.registerButton(this)
     }

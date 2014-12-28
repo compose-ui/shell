@@ -10,6 +10,8 @@ xtag.register('compose-shell-button', {
         type: this.type,
         content: this.textContent
       })
+    },
+    inserted: function(){
       if (this.type !== 'submit')
         this.shell.registerButton(this)
     }
@@ -62,24 +64,25 @@ xtag.register('compose-shell-param', {
         after: this.getAttribute('after'),
         placeholder: this.placeholder
       })
-
+    },
+    inserted: function(){
       this.hide()
 
       if (this.params.length > 0) {
         var groupEl = this.querySelector('.params-group')
         for (var param in this.params) {
+          // this.onShellSet.push(function(){
+          //   this.params[param].shell = this.shell
+          // })
           this.params[param].shell = this.shell
           this.params[param].addEventListener('show', this.updateVisibility.bind(this))
           this.params[param].addEventListener('hide', this.updateVisibility.bind(this))
           groupEl.appendChild(this.params[param])
-          // this.updateVisibility()
         }
       }
 
-      // this.params = xtag.queryChildren(this, 'compose-shell-param')
-
       if (this.type)
-        this.shell.registerParam(this)
+        this.shell.registerParam(this)// this.onShellSet = [function(){this.shell.registerParam(this)}].concat(this.onShellSet)
 
       if (this.type === 'text' || (this.getAttribute('value') || this.required))
         this.visible = true
@@ -106,6 +109,20 @@ xtag.register('compose-shell-param', {
         } else {
           this.className = this.className.replace('placeholder', '')
         }
+    },
+    'paste:delegate(span[contenteditable])': function(event){
+      var param = event.currentTarget
+      if (param.group) return
+      event.preventDefault()
+      if (event.clipboardData) {
+        var content = (event.originalEvent || event).clipboardData.getData('text/plain').replace(/^\s+|\s+$/g, '')
+        document.execCommand('insertText', false, content)
+      }
+      else if (window.clipboardData) {
+        var content = window.clipboardData.getData('Text').replace(/^\s+|\s+$/g, '')
+        document.selection.createRange().pasteHTML(content)
+      }
+
     },
     show: function(event){
       if (this.customInput)
@@ -166,10 +183,6 @@ xtag.register('compose-shell-param', {
   },
 
   methods: {
-    registerParam: function(param){
-      // Pass through
-      this.shell.registerParam(param)
-    },
     toggle: function(){ this.visible = !this.visible },
     show: function(){ this.visible = true },
     hide: function(){ this.visible = false },
