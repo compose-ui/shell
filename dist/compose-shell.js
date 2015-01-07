@@ -101,6 +101,7 @@ xtag.register('compose-shell-param', {
         if (this.textContent === param.placeholder && /placeholder/.test(this.className))
           this.textContent = ''
       }
+      param.setCursorAtEnd()
     },
     'blur:delegate(span[contenteditable])': function(event) {
       var param = event.currentTarget
@@ -217,6 +218,22 @@ xtag.register('compose-shell-param', {
           hintEl.removeEventListener(cssAnimEventTypes.end, animEnd)
         }.bind(this), false)
       }.bind(this), 2000)
+    },
+
+    setCursorAtEnd: function(){
+      var text = this.customInput.firstChild
+      if(text)
+        this.setSelection(text.length, 0)
+    },
+
+    setSelection: function(start, length) {
+      var el = this.customInput
+      var range = document.createRange()
+      range.setStart(el.firstChild, start)
+      range.setEnd(el.firstChild, start + length)
+      var sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
     },
 
     serializeValue: function(value){
