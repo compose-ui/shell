@@ -20,7 +20,7 @@
     <compose-shell method="get">
       <input type="hidden" value="blah">
       <compose-shell-param name="find" before="find(" after=")">
-        <compose-shell-param name="find[query]" required="true" before="{" after="}" type="hash" parser="bson"></compose-shell-param>
+        <compose-shell-param name="find[query]" required="true" focus="true" before="{" after="}" type="hash" parser="bson"></compose-shell-param>
         <compose-shell-param name="find[fields]" before=",{" after="}" type="hash" hint="Fields" parser="bson"></compose-shell-param>
       </compose-shell-param>
       <compose-shell-param name="sort" before=".sort({" after="})" type="hash" parser="bson"></compose-shell-param>

@@ -79,7 +79,7 @@ xtag.register('compose-shell-param', {
 
     },
     show: function(event){
-      if (this.customInput)
+      if (this.customInput && ( this.focus || this.add ))
         this.customInput.focus()
       if (this.hint)
         this.showHint()
@@ -93,6 +93,7 @@ xtag.register('compose-shell-param', {
     placeholder: { get: function(){ return this.getAttribute('placeholder') } },
     hint: { get: function(){ return this.getAttribute('hint') } },
     required: { get: function(){ return this.getAttribute('required') } },
+    focus:    { get: function(){ return this.getAttribute('focus') } },
     // group: { get: function() { return this.params.length > 0 } },
     editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
     optional: { get: function(){ return !!this.getAttribute('optional') } },
@@ -137,7 +138,7 @@ xtag.register('compose-shell-param', {
   },
 
   methods: {
-    toggle: function(){ this.visible = !this.visible },
+    toggle: function(){ this.add = true; this.visible = !this.visible },
     show: function(){ this.visible = true },
     hide: function(){ this.visible = false },
     
