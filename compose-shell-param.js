@@ -40,6 +40,8 @@ xtag.register('compose-shell-param', {
 
       if (this.type === 'text' || (this.getAttribute('value') || this.required))
         this.visible = true
+      if (this.getAttribute('focus'))
+        this.focusInput()
     }
   },
 
@@ -138,9 +140,14 @@ xtag.register('compose-shell-param', {
   },
 
   methods: {
-    toggle: function(){ this.add = true; this.visible = !this.visible },
+    toggle: function(){ this.visible = !this.visible },
     show: function(){ this.visible = true },
     hide: function(){ this.visible = false },
+
+    focusInput: function(){
+      if (this.customInput)
+        this.customInput.focus()
+    },
     
     updateVisibility: function(){
       this.visible = [].some.call(this.params, function(child){ return child.visible })
