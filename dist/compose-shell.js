@@ -129,8 +129,6 @@ xtag.register('compose-shell-param', {
 
     },
     show: function(event){
-      if (this.customInput && ( this.focus || this.add ))
-        this.customInput.focus()
       if (this.hint)
         this.showHint()
     }
