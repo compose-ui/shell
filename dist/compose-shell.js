@@ -20,6 +20,7 @@ xtag.register('compose-shell-button', {
   events: {
     'click:delegate(button)': function(event) {
       var button = event.currentTarget
+      button.children[0].blur()
       if (button.type === 'submit')
         return
       event.preventDefault()
@@ -43,6 +44,7 @@ xtag.register('compose-shell-button', {
     }
   }
 })
+
 },{"./templates/button.hbs":16}],2:[function(require,module,exports){
 var template = require('./templates/param.hbs')
 var BSON = require('./lib/bson')
@@ -86,6 +88,8 @@ xtag.register('compose-shell-param', {
 
       if (this.type === 'text' || (this.getAttribute('value') || this.required))
         this.visible = true
+      if (this.getAttribute('focus'))
+        this.focusInput()
     }
   },
 
@@ -125,8 +129,6 @@ xtag.register('compose-shell-param', {
 
     },
     show: function(event){
-      if (this.customInput)
-        this.customInput.focus()
       if (this.hint)
         this.showHint()
     }
@@ -139,6 +141,7 @@ xtag.register('compose-shell-param', {
     placeholder: { get: function(){ return this.getAttribute('placeholder') } },
     hint: { get: function(){ return this.getAttribute('hint') } },
     required: { get: function(){ return this.getAttribute('required') } },
+    focus:    { get: function(){ return this.getAttribute('focus') } },
     // group: { get: function() { return this.params.length > 0 } },
     editable: { get: function() { return !this.group && this.type && this.type !== 'boolean' } },
     optional: { get: function(){ return !!this.getAttribute('optional') } },
@@ -186,6 +189,11 @@ xtag.register('compose-shell-param', {
     toggle: function(){ this.visible = !this.visible },
     show: function(){ this.visible = true },
     hide: function(){ this.visible = false },
+
+    focusInput: function(){
+      if (this.customInput)
+        this.customInput.focus()
+    },
     
     updateVisibility: function(){
       this.visible = [].some.call(this.params, function(child){ return child.visible })
@@ -245,6 +253,7 @@ function stripWrapper(queryString) {
   if (matches)
     return matches[1]
 }
+
 },{"./lib/anim-events":5,"./lib/bson":6,"./templates/param.hbs":17}],3:[function(require,module,exports){
 var template = require('./templates/shell.hbs')
 
@@ -293,8 +302,10 @@ xtag.register('compose-shell', {
 
       var shell = event.currentTarget
       var param = shell.params[toggle]
-      if (param)
+      if (param) {
         param.toggle()
+        param.focusInput()
+      }
     },
     'show:delegate(compose-shell-param)': function(event){
       var shell = event.currentTarget
@@ -366,6 +377,7 @@ xtag.register('compose-shell', {
     }
   }
 })
+
 },{"./templates/shell.hbs":18}],4:[function(require,module,exports){
 require('./vendor/x-tag-core')
 

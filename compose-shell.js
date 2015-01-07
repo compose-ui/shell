@@ -45,8 +45,10 @@ xtag.register('compose-shell', {
 
       var shell = event.currentTarget
       var param = shell.params[toggle]
-      if (param)
+      if (param) {
         param.toggle()
+        param.focusInput()
+      }
     },
     'show:delegate(compose-shell-param)': function(event){
       var shell = event.currentTarget

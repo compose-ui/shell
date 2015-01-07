@@ -19,6 +19,7 @@ xtag.register('compose-shell-button', {
   events: {
     'click:delegate(button)': function(event) {
       var button = event.currentTarget
+      button.children[0].blur()
       if (button.type === 'submit')
         return
       event.preventDefault()
