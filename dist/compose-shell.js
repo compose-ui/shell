@@ -245,7 +245,8 @@ xtag.register('compose-shell-param', {
           return JSON.stringify(BSON.bsonEval(value))
         } catch (error) {
           console.log(error)
-          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unparsable value for ' + this.name)}})
+          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unserializable value for ' + this.name)}})
+          return value
         }
       }
     },
@@ -258,6 +259,7 @@ xtag.register('compose-shell-param', {
           return stripWrapper(BSON.toBsonString(JSON.parse(value), {indentation: 0}))
         } catch (error) {
           console.log(error)
+          xtag.fireEvent(this, 'error', {detail: {error: new Error('Unparsable value for ' + this.name)}})
           return value
         }
       }
