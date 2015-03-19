@@ -1,3 +1,7 @@
+## 2.1.3
+
+- Set the value in the input even if it's unparsable / unserializable.
+
 ## 2.1.2
 
 - Puts the cursor at the end of the field when focused via tabbing. @imathis
