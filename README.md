@@ -65,7 +65,8 @@ The parent tag contains the whole shell parameters and buttons (more on this bel
 - **type**: the type of the parameter. can be a "hash", "boolean", "text"
 - **parser**: the type of parser to use on the parameter when parsing and serializing its value. For now only bson is supported (MongoDB), if none is specified, it'll just passthrough the value as is.
 - **hint**: a small tooltip to display when the parameter is toggled.
-- **dependency**: a dependency of the parameter (this is the **name** of another attribute)
+- **dependency**: a dependency of the parameter (this is the **name** of another attribute.)
+- **focus**: specify the field to focus on when the shell is fully ready.
 
 #### Element's text content
 
