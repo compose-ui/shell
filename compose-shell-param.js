@@ -125,7 +125,7 @@ xtag.register('compose-shell-param', {
           // ensure stuff by blurring.
           this.customInput.blur()
 
-          val = this.customInput.textContent
+          val = this.customInput.textContent.replace(/[\u200B-\u200D\uFEFF]/g, '')
           if (this.placeholder) {
             if (/placeholder/.test(this.customInput.className) && val === this.placeholder)
               val = ""
